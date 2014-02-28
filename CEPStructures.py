@@ -1,3 +1,14 @@
+"""
+CEPStructures.py
+
+Created by CA Brown and KS Brown.  For reference see:
+Brown, C.A., Brown, K.S. 2010. Validation of coevolving residue algorithms via 
+pipeline sensitivity analysis: ELSC and OMES and ZNMI, oh my! PLoS One, e10779. 
+doi:10.1371/journal.pone.0010779
+
+This module is calculates distances and contacts from pdb files/structures.
+"""
+
 import Bio.PDB as pdb
 from numpy import argsort,sort
 

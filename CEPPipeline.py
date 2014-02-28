@@ -12,38 +12,17 @@ easily be adapted to include more algorithms.  The main pipeline is initialized
 with all of the information for the rest of the project. 
 """
 
-# CHANGED pdb parsing and calculations have been moved into a CEPStructures module
-
-# Big TODOs for next version:
-# TODO: wrap parameters into another object for easier specification, perturbation, and passing; 
-#        arguments have gotten complicated and multi-level
-# TODO: extract mapping to canonical sequence positions from compute_networks: make it a separate
-#        step - easier to compare to multiple canonicals this way
-# TODO: make it easier to compute new statistics - different acc/rep defs, etc. after having already
-#        done the network scoring
-# TODO: sequence weighting, rather than drops
-# TODO: make restarts much easier
-
-# Misc.
-# TODO: __str__ for the pipeline, giving a summary of the options
-# TODO: fix thing with resampling Method
-# TODO: fix method naming conventions so we don't have to check for case and lower case-ize things
-# TODO: log the acc/rep method parameters to the pipeline object (database) so plotting is nicer; 
-#        it would be better to use the accuracy limits if we know what they are (for contact and 
-#        rescaled, for example)
-
-
 import sys, os, unittest, random, glob, cPickle, re, itertools
 from scipy import mean
 from scipy.stats import pearsonr, spearmanr
 from scipy.linalg import svd
 import numpy as np
 import Bio.PDB as pdb
-from CEPPreprocessing import SequenceUtilities
-from CEPLogging import LogPipeline
-import CEPAlgorithms
-import CEPNetworks
-import CEPStructures
+from pycsa.CEPPreprocessing import SequenceUtilities
+from pycsa.CEPLogging import LogPipeline
+from pycsa import CEPAlgorithms
+from pycsa import CEPNetworks
+from pycsa import CEPStructures
 
 
 # decorator function to be used for logging purposes
@@ -108,7 +87,6 @@ class CEPPipeline(object):
         else:
             raise CEPPipelineDirectoryIOException
 
-    # NOT TESTED THOROUGHLY
     def __str__(self):
         """String representation of the pipeline."""
         strRep = 'Correlated Substitution Analysis Pipeline\n'
@@ -236,7 +214,6 @@ class CEPPipeline(object):
             SequenceUtilities.write_fasta_sequences(halfTwo,seqFileTwo)
     
 
-    # TODO: remove double counting of canonical sequence
     @log_function_call('Bootstrap Resampling')
     def _resample_bootstrap(self, stockholm, seqDict, **kwargs):
         """Bootstrap resampling.  Takes the master alignment of N sequences and produces 
@@ -414,7 +391,6 @@ class CEPPipeline(object):
         return weightSum,distSum
     
     
-    # TODO: need to check that graphs exist
     @log_function_call('Calculating Resampling Statistics')
     def calculate_resampling_statistics(self,accMethod='distance',repMethod='splithalf',distMethod='oneminus',simMethod='spearman',rescaled=True,number=None, pdbFile=None, offset=0):
         """Calculates the suite of resampling statistics (accuracy, reproducibility, etc.) from the pruned graphs
@@ -475,7 +451,6 @@ class CEPPipeline(object):
             raise CEPPipelineAccuracyMethodException(distMethod)
 
     
-    # TODO: way to get angCut, distCut in here
     @log_function_call('Calculating Contact-Based Accuracy')
     def _calculate_acc_contacts(self,distMethod,rescaled):
         """Calculates contact-based accuracy for resamples; after pruning, edge weights are
@@ -516,7 +491,6 @@ class CEPPipeline(object):
                     self.consensusGraph.add_edge(i,j,weight=1/norm)
 
     
-    # TODO : VERY FRAGILE!  Fix if we want to use for split-half resampling.
     @log_function_call('Calculating BICAR Reproducibility')
     def _calculate_rep_bicar(self,simMethod):
         """Defines reproducibility as the average similarity among all unique pairs of 
@@ -717,7 +691,7 @@ class CEPPipelineStatisticsException(Exception):
 
 class CEPPipelineTests(unittest.TestCase):
     def setUp(self):
-        pass # TODO add unit tests to CEPPipeline
+        pass
 
 if __name__ == '__main__':
     unittest.main()

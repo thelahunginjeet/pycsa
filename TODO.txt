@@ -1,0 +1,24 @@
+CEPAlgorithms:
+-some method parameters (matrix regularization, sparsity, etc.) are still hard-coded
+-fix SCA to use calculated frequencies
+-0 vs. 1 position inconsistency (causes headaches but no errors)
+-RPMI occasionally gives a funky error
+
+CEPPipeline:
+-wrap parameters into another object for easier specification and passing (config file?)
+-remove mapping to canonical sequence positions from compute_networks; easier to compare multiple canonicals this way
+-make it easier to compute alternate statistics - different acc/rep defs, etc. after having already done the network scoring
+-make restarts easier
+-improve __str__ for the pipeline, giving help message with a summary of the program options
+-remove double counting of canonical sequence
+-passing in parameters (angCut, linSep) to the CASP contact calculator
+-unit testing?
+
+CEPPlotting:
+-utility for nice plot of consensus graphs
+-flag for turning legend on and off
+-remove/update deprecated plotting functions
+-unit tests?
+
+CEPPreprocessing:
+-unit tests?

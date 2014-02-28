@@ -13,9 +13,6 @@ that relied Anthony Fodor's code.  These can easily be recoded and
 wrapped back in.
 """
 
-# TODO: get scoring method parameters in there (matrix regularization, sparsity parameter, etc.)
-# TODO: fix SCA to use calculated frequencies, etc.
-
 import sys, os, unittest, copy, operator
 from numpy import log as log
 from numpy import exp as exp
@@ -27,8 +24,8 @@ from numpy.linalg import cholesky, svd, pinv, inv, eig
 from scipy.stats import ks_2samp, linregress
 from scipy import randn
 from itertools import izip,imap
-from CEPPreprocessing import SequenceUtilities
-from CEPLogging import LogPipeline
+from pycsa.CEPPreprocessing import SequenceUtilities
+from pycsa.CEPLogging import LogPipeline
 
 # rpy2 stuff is for the graphical lasso - current python implementations don't work with
 #    the covariance matrix directly, and are therefore utterly useless
@@ -93,9 +90,6 @@ def fractional_similarity(s1,s2):
     return 1.0 - h/len(s1)
 
     
-# TODO : fix 0 vs. 1 position inconsistency
-
-
 class MSA(object):
     """
     This is a simple multiple sequence alignment class to be used with MSAAlgorithms.
@@ -395,35 +389,6 @@ class MSAAlgorithms(MSA):
             [self.reducedColumns.pop(x) for x in keys if self.sequences['#=GC RF'][x] == '-']
         
     
-    # This MI function has been deprecated, since it doesn't matter if we include gaps or not
-    '''        
-    def calculate_mutual_information(self):
-        """Calculate the mutual information (in nats) for reducedColumns.  This also logs the 
-        joint entropy, as it is free to calculate and some MI algorithms want both. Gaps are
-        ignored for this calculation - the rows/columns in the pair counts corresponding to
-        gaps (the last ones) are dropped."""
-        self.jointEntropy = {}
-        self.mutualInformation = {}
-        print "calculating mutual information and joint entropy . . ."
-        for column1 in self.reducedColumns:
-            column2List = {}.fromkeys([c for c in self.reducedColumns if c > column1])
-            for column2 in column2List:
-                # joint entropy 
-                # ignore the gaps to get pij
-                nijtrue = self.doublets[(column1,column2)][0:-1,0:-1]
-                rho,nipc,nijpc = self.pseudo[self.pcType]
-                nijpc = nijpc[0:-1,0:-1]
-                pij = (1.0-rho)*nijtrue/nijtrue.sum() + rho*(nijpc/nijpc.sum())
-                self.jointEntropy[(column1,column2)] = -1.0*multiply(pij,nan_to_num(log(pij))).sum()
-                # these are the positional marginals
-                pi = pij.sum(axis=1)
-                pj = pij.sum(axis=0)
-                self.mutualInformation[(column1,column2)] = -1.0*multiply(pi,nan_to_num(log(pi))).sum() \
-                        - 1.0*multiply(pj,nan_to_num(log(pj))).sum() - self.jointEntropy[(column1,column2)]
-        clean_zeros(self.mutualInformation)
-    '''
-
-    
     def calculate_mutual_information(self):
         """Calculates the mutual information for reduced columns, including gaps."""
         self.jointEntropy = {}
@@ -678,7 +643,6 @@ class MSAAlgorithms(MSA):
         clean_zeros(self.Zres)
 
 
-    # got a funky error here    
     def calculate_RPMI(self):
         """Calculate the residual product mutual information (natural log base) for reducedColumns
         Note: this is basically a combination of Zres with our product scoring theme"""
@@ -1011,7 +975,6 @@ class MSAAlgorithms(MSA):
         clean_zeros(self.tapDI)
     
 
-    # get rho in as a parameter
     def calculate_RIDGE(self):
         """Uses L2-regularized inversion of the full covariance matrix to calculate pair scores.  In most respects, 
         this is the L2 equivalent of PSICOV.
@@ -1058,8 +1021,6 @@ class MSAAlgorithms(MSA):
         clean_zeros(self.RIDGE)
 
 
-    # get rho in as a parameter
-    # allow manual control of degree of shrinkage
     def calculate_PSICOV(self):
         """
         Uses sparse covariance matrix estimation (Jones et al. 2012) to compute pair scores.

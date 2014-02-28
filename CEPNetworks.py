@@ -1,5 +1,5 @@
 """
-CEPGraphs.py
+CEPNetworks.py
 
 Created by CA Brown and KS Brown.  For reference see:
 Brown, C.A., Brown, K.S. 2010. Validation of coevolving residue algorithms via 
@@ -15,7 +15,7 @@ with all of the information for the rest of the project.
 import sys, os, unittest, scipy.stats, re, copy, networkx
 from numpy import array
 from networkx import Graph as nxGraph
-from CEPLogging import LogPipeline
+from pycsa.CEPLogging import LogPipeline
 
 # decorator function to be used for logging purposes
 log_function_call = LogPipeline.log_function_call
