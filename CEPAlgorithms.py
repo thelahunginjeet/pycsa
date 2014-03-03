@@ -15,10 +15,11 @@ wrapped back in.
 
 import sys, os, unittest, copy, operator
 from numpy import log as log
+from numpy import log2 as log2
 from numpy import exp as exp
 from numpy import power as power
 from numpy import diag, array, mean, std, var, sqrt, nan_to_num, zeros, ones, sort, triu, tril, real_if_close
-from numpy import asmatrix, asarray, matrix, array, multiply, eye, max, min, delete, dot
+from numpy import asmatrix, asarray, matrix, array, multiply, eye, max, min, delete, dot, argmax, sort, hstack
 from numpy.random import randn, permutation
 from numpy.linalg import cholesky, svd, pinv, inv, eig
 from scipy.stats import ks_2samp, linregress
@@ -206,6 +207,59 @@ class MSA(object):
                     aa1 = self.sequences[s][column1]
                     aa2 = self.sequences[s][column2]
                     self.doublets[(column1,column2)][aaMap[aa1],aaMap[aa2]] += self.seqwts[s]
+
+
+    def calculate_consensus_sequence(self):
+        """
+        Computes a consensus sequence for the MSA, by doing the following:
+            1. Henikoff weight the alignment
+            2. Compute symbol counts (singlets are used here)
+            3. Compute the column entropy, IGNORING GAPS
+            4. Compute uncertainty reduction for each column, using 
+                    R_c = log2(20) - H_c
+            5. Reduce R_c by the gap fraction (R_c' = (1-gaps[c])*R_c
+            6. Calculate a score for each position and each non-gap character via 
+                    S_c(A) = p_c(A)*R_c'
+            7. Find max(S_c(A)) over A, for each c.  That's the consensus character.
+        For a rough score interpretation, a nongapped column that is partitioned equally among
+        the 20 amino acids will have a score of 0.0.
+
+        This function returns an alignment-position indexed dictionary of consensus AAs and
+        score, along with a 20 x Npos matrix of character scores, and a corresponding key to 
+        identity of the rows.
+
+        No pseudocounting is used in determining character frequencies.
+        """
+        consensus = {}
+        aminoAcids = tuple('ACDEFGHIKLMNPQRSTVWY-')
+        self.calculate_sequence_weights(method='Henikoff')
+        self.calculate_symbol_counts()
+        # copy the frequency info to avoid corruption
+        freqs = copy.copy(self.singlets)
+        # convert to frequencies, ignoring gaps
+        Rscore = {}
+        for c in freqs:
+            freqs[c] = freqs[c]/freqs[c][0:-1].sum()
+            Rscore[c] = (1-self.gaps[c])*(log2(20.0) + 1.0*freqs[c][0:-1].T*log2(freqs[c][0:-1] + 1.0e-12))[0,0]
+            # can overwrite the frequency info now (making character scores) and drop the gap
+            freqs[c] = Rscore[c]*freqs[c][0:-1]
+            # find the consensus character
+            maxscore = max(freqs[c])
+            maxchar = aminoAcids[argmax(freqs[c])]
+            consensus[c] = (maxchar,maxscore)
+        # last thing is to dump out the whole matrix of scores
+        orderedCols = sort(freqs.keys())
+        firstDone = False
+        for c in orderedCols:
+            if not firstDone:
+                scorematrix = hstack([freqs[c]])
+                firstDone = True
+            else:
+                scorematrix = hstack([scorematrix,freqs[c]])
+        return consensus,list(aminoAcids[0:-1]),asarray(scorematrix)
+
+
+
 
 
     def calculate_symbol_counts_fast(self):

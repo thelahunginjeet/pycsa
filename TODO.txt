@@ -3,7 +3,6 @@ CEPAlgorithms:
 -fix SCA to use calculated frequencies
 -0 vs. 1 position inconsistency (causes headaches but no errors)
 -RPMI occasionally gives a funky error
--put in simple code to produce consensus sequence information (could just be in the MSA class)
 
 CEPPipeline:
 -wrap parameters into another object for easier specification and passing (config file?)
