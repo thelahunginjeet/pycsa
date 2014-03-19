@@ -153,7 +153,7 @@ class MSA(object):
             'similarity' : weight sequences so that those more similar than cutoff receive
                            a total weight of 1.0 (sum(wts) = N_eff)
             
-            'Henikoff'   : position-based weighting (Henikoff and Henikoff, JMB 1994) (this version
+            'henikoff'   : position-based weighting (Henikoff and Henikoff, JMB 1994) (this version
                            normalizes the weights so that sum(wts) = N_sequences)
             
             'symmpurge'  : a symmetric purging method; the number of times each sequence would
@@ -187,7 +187,7 @@ class MSA(object):
                 wtsum = sum(self.seqwts.values())
                 for k in self.seqwts:
                     self.seqwts[k] = len(self.sequences)*(self.seqwts[k]/wtsum)
-        elif method is 'Henikoff':
+        elif method is 'henikoff':
             for k in self.seqwts:
                 self.seqwts[k] = 0.0
             for c in self.columns:
