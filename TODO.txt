@@ -3,6 +3,7 @@ CEPAlgorithms:
 -fix SCA to use calculated frequencies
 -0 vs. 1 position inconsistency (causes headaches but no errors)
 -RPMI occasionally gives a funky error
+-make "zero cleaning" optional; sometimes we don't want to drop everything
 
 CEPPipeline:
 -wrap parameters into another object for easier specification and passing (config file?)

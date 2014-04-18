@@ -111,7 +111,6 @@ def fractional_similarity(s1,s2):
     """
     assert len(s1) == len(s2)
     # number of dissimilar positions
-    #h = 1.0*sum(ch1 != ch2 for ch1,ch2 in zip(s1,s2))
     h = 1.0*sum(imap(operator.ne,s1,s2))
     return 1.0 - h/len(s1)
 
@@ -484,7 +483,6 @@ class MSAAlgorithms(MSA):
                 # joint entropy
                 self.jointEntropy[(column1,column2)] = -1.0*multiply(self.Pij[(column1,column2)],nan_to_num(log(self.Pij[column1,column2]))).sum()
                 self.mutualInformation[(column1,column2)] = negent1 + negent2 - self.jointEntropy[(column1,column2)]
-        clean_zeros(self.mutualInformation)
     
 
     def mix_distributions(self):
@@ -600,8 +598,6 @@ class MSAAlgorithms(MSA):
                 self.NMI[(column1,column2)] = self.mutualInformation[(column1,column2)]/self.jointEntropy[(column1,column2)]
             except ZeroDivisionError:
                 self.NMI[(column1,column2)] = 0.0
-         # remove pairs with values of less than or equal to zero
-        clean_zeros(self.NMI)
 
     
     def calculate_ZNMI(self):
@@ -627,7 +623,6 @@ class MSAAlgorithms(MSA):
             meanProduct = (mean1*var2 + mean2*var1)/float(var1+var2)
             stdProduct = sqrt((var1*var2)/(var1+var2))
             self.ZNMI[(column1,column2)] = (self.NMI[(column1,column2)] - meanProduct)/stdProduct
-        clean_zeros(self.ZNMI)
     
     
     def calculate_MIc(self):
@@ -664,7 +659,6 @@ class MSAAlgorithms(MSA):
         meanCPS = sqrt(meanCPS)
         for column1,column2 in self.mutualInformation:
             self.MIc[(column1,column2)] = self.mutualInformation[(column1,column2)] - CPS[(column1,column2)]/meanCPS
-        clean_zeros(self.MIc)
     
             
     def calculate_MIp(self):
@@ -675,7 +669,6 @@ class MSAAlgorithms(MSA):
         print "calculating mutual information product (MIp) . . ."
         self.MIp = copy.copy(self.mutualInformation)
         self.apc_correction(self.MIp)
-        clean_zeros(self.MIp)
         
     
     def calculate_Zres(self):
@@ -719,7 +712,6 @@ class MSAAlgorithms(MSA):
                 self.Zres[(column1,column2)] = zres1 * zres2
             else:
                 self.Zres[(column1,column2)] = -abs(zres1 * zres2)
-        clean_zeros(self.Zres)
 
 
     def calculate_RPMI(self):
@@ -776,7 +768,6 @@ class MSAAlgorithms(MSA):
         bonferroni = len(self.pvalues)
         for pair in self.pvalues:
             self.pvalues[pair] = min(1.0, bonferroni*self.pvalues[pair])
-        clean_zeros(self.RPMI)
 
 
     def calculate_FCHISQ(self):
@@ -798,7 +789,6 @@ class MSAAlgorithms(MSA):
                 chisq = power(Oij-Eij,2)/Eij
                 # only include non-empty Oij cells
                 self.FCHISQ[(ci,cj)] = chisq[Oij > 0.0].sum()
-        clean_zeros(self.FCHISQ)
 
     
     def calculate_SCA(self):
@@ -844,7 +834,6 @@ class MSAAlgorithms(MSA):
         for i in xrange(Npositions):
             for j in xrange(i+1,Npositions):
                 self.SCA[(integers[i],integers[j])] = scaMatrix[i,j]
-        clean_zeros(self.SCA)
 
     
     def calculate_NMF(self):
@@ -890,7 +879,6 @@ class MSAAlgorithms(MSA):
                 #self.INVCOV[(c1,c2)] = (multiply(W,W).sum()/(20*20))
                 # this gives pretty big scores . . .
                 self.NMF[(c1,c2)] = sqrt(multiply(W,W).sum())
-        clean_zeros(self.NMF)
 
 
     def calculate_nmfDI(self):
@@ -925,7 +913,6 @@ class MSAAlgorithms(MSA):
             for c2 in c2List:
                 indx2 = colToInt[c2]
                 self.nmfDI[(c1,c2)] = self.map_potts_DI(eij[indx1*20:(indx1+1)*20,indx2*20:(indx2+1)*20],self.Pi,c1,c2)
-        clean_zeros(self.nmfDI)
     
 
     def calculate_ipDI(self):
@@ -963,7 +950,6 @@ class MSAAlgorithms(MSA):
                 Jij = log(nan_to_num((multiply(num1,num2)/multiply(den1,den2))))
                 # use DI to get a scalar
                 self.ipDI[(c1,c2)] = self.map_potts_DI(Jij,self.Pi,c1,c2)
-        clean_zeros(self.ipDI)
     
     
     
@@ -1009,8 +995,6 @@ class MSAAlgorithms(MSA):
                 Jcorr = Cij/(multiply(pi,1.0-pi)*multiply(pj,1.0-pj) - multiply(Cij,Cij))
                 # use DI to get a scalar
                 self.smDI[(c1,c2)] = self.map_potts_DI(Jloop+J2spin-Jcorr,self.Pi,c1,c2)
-        # clean it out
-        clean_zeros(self.smDI)
 
 
     
@@ -1051,7 +1035,6 @@ class MSAAlgorithms(MSA):
                 m2 = 1.0 - 2*self.Pi[c2][0:-1]
                 eij = (sqrt(1.0 - 2.0*multiply(m1*m2.T,Cinv)) - 1)/(m1*m2.T)
                 self.tapDI[(c1,c2)] = self.map_potts_DI(eij,self.Pi,c1,c2)
-        clean_zeros(self.tapDI)
     
 
     def calculate_RIDGE(self):
@@ -1097,7 +1080,6 @@ class MSAAlgorithms(MSA):
                 self.RIDGE[(c1,c2)] = self.RIDGE[(c1,c2)].real
         # APC
         self.apc_correction(self.RIDGE)
-        clean_zeros(self.RIDGE)
 
 
     def calculate_PSICOV(self):
@@ -1137,7 +1119,6 @@ class MSAAlgorithms(MSA):
                 self.PSICOV[(c1,c2)] = abs(covMat[indx1*21:(indx1*21 + 20),indx2*21:(indx2*21 + 20)]).sum()
         # product correction
         self.apc_correction(self.PSICOV)
-        clean_zeros(self.PSICOV)
 
 
 class MSADimensionException(ValueError):
