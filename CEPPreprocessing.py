@@ -303,7 +303,7 @@ class SequenceUtilities(object):
  
     @staticmethod
     @log_function_call('Filtering Sequences by Length')
-    def prune_by_length(seqDict,minLength=0,maxLength=10000):
+    def prune_by_length(seqDict,minLen=0,maxLen=10000):
         """Remove sequences in dictionary that exceed length limits and return new dictionary"""
         newDict = dict()
         for seq in seqDict:
