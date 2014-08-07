@@ -267,10 +267,36 @@ class SequenceUtilities(object):
         NOTE: '#=GC RF' the reference sequence that is kept."""
         # load a stockholm file
         stoFile = open(stoFile,'r')
-        stoHandle = stoFile.read().split('\n\n')
+        #stoHandle = stoFile.read().split('\n\n')
+        stoHandle = stoFile.readlines()
         stoFile.close()
         # start parsing
         sequences = {}
+        for line in stoHandle:
+            parts = line.strip().split()
+            if parts[0] == '//':
+                # end of file, we are done
+                return sequences
+            elif parts[0] == '#=GS':
+                # header info; don't need
+                pass
+            elif parts[0] == '#=GR':
+                # reference seq for posterior probabilities; don't need
+                pass
+            elif parts[0] == '#=GC':
+                # reference seq for alignment; keep
+                try:
+                     sequences[parts[0]+' '+parts[1]] += parts[2].replace('.','-')
+                except KeyError:
+                    sequences[parts[0]+' '+parts[1]] = parts[2].replace('.','-')
+            else:
+                # rest should be real sequences
+                try:
+                    sequences[parts[0]] += parts[1].replace('.','-')
+                except KeyError:
+                    sequences[parts[0]] = parts[1].replace('.','-')
+
+        '''
         for block in stoHandle[1:-1]:
             for line in block.split('\n'):
                 parts = line.split()
@@ -289,6 +315,7 @@ class SequenceUtilities(object):
                         sequences[parts[0]] += parts[1].replace('.','-')
                     except KeyError:
                         sequences[parts[0]] = parts[1].replace('.','-')
+        '''
         return sequences
 
     @staticmethod
