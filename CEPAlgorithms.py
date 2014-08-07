@@ -245,12 +245,15 @@ class MSA(object):
             6. Calculate a score for each position and each non-gap character via 
                     S_c(A) = p_c(A)*R_c'
             7. Find max(S_c(A)) over A, for each c.  That's the consensus character.
+
+        If n > 1, the top n scoring characters are returned.
+
         For a rough score interpretation, a nongapped column that is partitioned equally among
         the 20 amino acids will have a score of 0.0.
 
-        This function returns an alignment-position indexed dictionary of consensus AAs and
-        score, along with a 20 x Npos matrix of character scores, and a corresponding key to 
-        identity of the rows.
+        This function returns an alignment-position indexed dictionary of consensus AAs (this will
+        be a tuple of length n) and score (score is only reported for the highest-scoring character), 
+        along with a 20 x Npos matrix of character scores, and a corresponding key to identity of the rows.
 
         No pseudocounting is used in determining character frequencies.
         """
