@@ -1,10 +1,10 @@
 """
 CEPAlgorithms.py
 
-This module is used to package all of the two-point correlation 
+This module is used to package all of the two-point correlation
 algorithms (e.g. ZNMI, SCA, OMES, . . .) for the CEPPipeline.  Many
 of the algorithms have been removed (e.g. old SCA, ELSC, and others)
-that relied Anthony Fodor's code.  These can easily be recoded and 
+that relied Anthony Fodor's code.  These can easily be recoded and
 wrapped back in.
 
 @author: Kevin S. Brown (University of Connecticut), Christopher A. Brown (Palomidez LLC)
@@ -14,27 +14,27 @@ This source code is provided under the BSD-3 license, duplicated as follows:
 Copyright (c) 2014, Kevin S. Brown and Christopher A. Brown
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, 
+Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice, this 
+1. Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-2. Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or other 
+2. Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or other
 materials provided with the distribution.
 
-3. Neither the name of the University of Connecticut  nor the names of its contributors 
-may be used to endorse or promote products derived from this software without specific 
+3. Neither the name of the University of Connecticut  nor the names of its contributors
+may be used to endorse or promote products derived from this software without specific
 prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS 
-OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
-AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
@@ -73,10 +73,10 @@ def clean_zeros(dictionary):
 
 def prior_covariance(sigmaSample,targetType='dense'):
     """
-    Returns a prior covariance estimate sigmaPrior, using the sampleCovariance 
+    Returns a prior covariance estimate sigmaPrior, using the sampleCovariance
     matrix.  Allowed types:
         'diagonal' : prior is diagonal, with the diagonal elements = mean(diag(sigmaSample))
-        'dense' : diagonal elements same as 'diagonal', with off diagonal elements equal to 
+        'dense' : diagonal elements same as 'diagonal', with off diagonal elements equal to
                   the average off-diagonal element in sigmaSample
     """
     meanS = mean(diag(sigmaSample))
@@ -114,7 +114,7 @@ def fractional_similarity(s1,s2):
     h = 1.0*sum(imap(operator.ne,s1,s2))
     return 1.0 - h/len(s1)
 
-    
+
 class MSA(object):
     """
     This is a simple multiple sequence alignment class to be used with MSAAlgorithms.
@@ -138,26 +138,26 @@ class MSA(object):
         for k in self.seqwts:
             self.seqwts[k] = 1.0
 
-    
+
     def calculate_sequence_weights(self,method='unweighted',cutoff=0.68):
         """
         Computes weights for similar sequences, discounting contributions to frequent counts
         from similar sequences.
-        
+
         Supported methods:
-            
+
             'unweighted' : weight each sequence equally, regardless of pairwise similarity
                             (sum(wts) = N_sequences)
-            
+
             'similarity' : weight sequences so that those more similar than cutoff receive
                            a total weight of 1.0 (sum(wts) = N_eff)
-            
+
             'henikoff'   : position-based weighting (Henikoff and Henikoff, JMB 1994) (this version
                            normalizes the weights so that sum(wts) = N_sequences)
-            
+
             'symmpurge'  : a symmetric purging method; the number of times each sequence would
                            be purged for being too similar to a target sequence is counted, for
-                           the identity of the target being cycled through the sequence set.  
+                           the identity of the target being cycled through the sequence set.
                            The weights are then proportional to 1 - fraction of times purged
                            (normalized so that sum(wts) = N_sequences)
         """
@@ -201,7 +201,7 @@ class MSA(object):
             for k in self.seqwts:
                 self.seqwts[k] = len(self.sequences)*(self.seqwts[k]/wtsum)
 
-    
+
     def calculate_symbol_counts(self):
         """
         Calculates pair and single amino acid counts, including gaps, for each column in an alignment.
@@ -223,7 +223,7 @@ class MSA(object):
                 self.singlets[c][aaMap[aa]] += self.seqwts[s]
             # same-site frequences
             self.doublets[(c,c)] = asmatrix(diag(asarray(self.singlets[c]).flat))
-        # doublets    
+        # doublets
         for column1 in self.columns:
             for column2 in [x for x in self.columns if x > column1]:
                 self.doublets[(column1,column2)] = matrix(zeros([len(aminoAcids),len(aminoAcids)],dtype='float64'))
@@ -239,10 +239,10 @@ class MSA(object):
             1. Henikoff weight the alignment
             2. Compute symbol counts (singlets are used here)
             3. Compute the column entropy, IGNORING GAPS
-            4. Compute uncertainty reduction for each column, using 
+            4. Compute uncertainty reduction for each column, using
                     R_c = log2(20) - H_c
             5. Reduce R_c by the gap fraction (R_c' = (1-gaps[c])*R_c
-            6. Calculate a score for each position and each non-gap character via 
+            6. Calculate a score for each position and each non-gap character via
                     S_c(A) = p_c(A)*R_c'
             7. Find max(S_c(A)) over A, for each c.  That's the consensus character.
 
@@ -252,7 +252,7 @@ class MSA(object):
         the 20 amino acids will have a score of 0.0.
 
         This function returns an alignment-position indexed dictionary of consensus AAs (this will
-        be a tuple of length n) and score (score is only reported for the highest-scoring character), 
+        be a tuple of length n) and score (score is only reported for the highest-scoring character),
         along with a 20 x Npos matrix of character scores, and a corresponding key to identity of the rows.
 
         No pseudocounting is used in determining character frequencies.
@@ -323,7 +323,7 @@ class MSA(object):
                     pcount = pairs.count(p)
                     self.doublets[(column1,column2)][aaMap[p[0]],aaMap[p[1]]] += pcount
 
-    
+
     def load_msa(self,msaFile):
         """Function to load a multiple sequence alignment for further processing"""
         self.sequences = SequenceUtilities.read_fasta_sequences(msaFile)
@@ -340,8 +340,8 @@ class MSA(object):
             self.columns = {}
             for i in xrange(self.dimensions[1]):
                 self.columns[i] = [x[i] for x in sequenceList]
-    
-    
+
+
     def translate_positions(self):
         """Function to make a mapping (dict) between the MSA position and individual sequence positions"""
         self.mapping = dict()
@@ -353,8 +353,8 @@ class MSA(object):
                 else:
                     position[sequence] = len(self.sequences[sequence][:column+1])-self.sequences[sequence][:column+1].count('-')
             self.mapping[column] = position
-            
-    
+
+
     def calculate_gap_frequency(self):
         """Function to calculate the gap frequency as a function of column position"""
         self.gaps = dict()
@@ -366,31 +366,31 @@ class MSA(object):
 class MSAAlgorithms(MSA):
     """
     Multiple Sequence Alignment Algorithms class for computing alignment pair scores.  Pseudocounting is implemented in a
-    variety of ways, controlled by the pcType, pcMix,and pcLambda parameters.  All pseudocouting is covered via mixtures, 
+    variety of ways, controlled by the pcType, pcMix,and pcLambda parameters.  All pseudocouting is covered via mixtures,
     meaning:
         P = (1-pcMix)*P_true + pcMix*P_psuedo
-    where P_true is a density constructed from true counts and P_pseudo is the appropriate pseudocount distribution.  
-    
-    WARNING: Be careful when comparing the results from 'fixed' to scalar count addition; MI methods which ignore gaps 
+    where P_true is a density constructed from true counts and P_pseudo is the appropriate pseudocount distribution.
+
+    WARNING: Be careful when comparing the results from 'fixed' to scalar count addition; MI methods which ignore gaps
     have the effect of increasing the effective pseudocount parameter.  For example, using pcType='fixed' and calculating
-    basic MI is equivalent to adding scalar psuedocounts equal to (21.0/20.0)*pcLambda.  
-    
+    basic MI is equivalent to adding scalar psuedocounts equal to (21.0/20.0)*pcLambda.
+
     This is not a problem, but just reflects the impossibility of making things work the same way for methods which include
     all symbols (+gaps) and those that do not.
 
         'none' : do not use pseudocounts at all (P_pseudo = P_true)
-        
+
         'fix'  : adds a fixed number of counts (pcLambda), by fixing rho as 21*lambda/(21*lambda + N_seq); with this option the
                     number of fake counts does not scale with the size of the alignment
-        
+
         'inc'  : adds a fixed weight (pcMix) of P_psuedo, which has the effect of adding more fake counts for larger
                     alignments
-        
+
         'bg'   : adds counts according to background amino acid frequencies/abundances
-        
+
         'emp'  : like background counting, but uses observed frequencies of symbols in the aa
-    
-    Recalculating P_true is not required when changing psueudocount method; call set_pseudocounting() with the set 
+
+    Recalculating P_true is not required when changing psueudocount method; call set_pseudocounting() with the set
     of desired arguments, and then appropriate scoring method will use the new pseudocount distribution.
     """
     def __init__(self, alnFile, gapFreqCutoff=0.1, percentChange=0.05, pcType='fix', pcMix=0.5, pcLambda=1.0, swtMethod='unweighted', cutoff=0.38):
@@ -438,9 +438,9 @@ class MSAAlgorithms(MSA):
         self.mutualInformation = {}
 
 
-    # might want to include the gaps in column entropy?        
+    # might want to include the gaps in column entropy?
     def calculate_entropy(self):
-        """Calculates the column entropy (in nats).  Columns are removed from further calculation if 
+        """Calculates the column entropy (in nats).  Columns are removed from further calculation if
         they are not entropic enough (see MSAAlgorithms.__init__() for the definition of the entropy
         cutoff.
         NOTE: This entropy is not used in MI calculation - the marginals are recomputed for each
@@ -448,7 +448,7 @@ class MSAAlgorithms(MSA):
         self.entropy = {}
         # make a list of columns that are less gapped than self.gapFreqCutoff
         columnList = {}.fromkeys([c for c in self.columns if self.gaps[c] < self.gapFreqCutoff])
-        print "calculating entropy . . ."        
+        print "calculating entropy . . ."
         for column in columnList:
             letters = {}.fromkeys([x for x in self.columns[column] if x is not '-'])
             numLetters = float(self.dimensions[0]-self.columns[column].count('-'))
@@ -468,8 +468,8 @@ class MSAAlgorithms(MSA):
         if self.hmmer == True:
             keys = self.reducedColumns.keys()
             [self.reducedColumns.pop(x) for x in keys if self.sequences['#=GC RF'][x] == '-']
-        
-    
+
+
     def calculate_mutual_information(self):
         """Calculates the mutual information for reduced columns, including gaps."""
         self.jointEntropy = {}
@@ -486,7 +486,7 @@ class MSAAlgorithms(MSA):
                 # joint entropy
                 self.jointEntropy[(column1,column2)] = -1.0*multiply(self.Pij[(column1,column2)],nan_to_num(log(self.Pij[column1,column2]))).sum()
                 self.mutualInformation[(column1,column2)] = negent1 + negent2 - self.jointEntropy[(column1,column2)]
-    
+
 
     def mix_distributions(self):
         """Uses the true counts and pseudocounting type to compute effective pair and singlet frequencies.
@@ -504,7 +504,7 @@ class MSAAlgorithms(MSA):
             nijtrue = self.doublets[(c1,c1)]
             self.Pij[(c1,c1)] = (1.0 - rho)*(nijtrue/nijtrue.sum()) + rho*(asmatrix(diag(asarray(nipc.flat)))/nipc.sum())
 
-    
+
     def calculate_covariance_matrix(self,Pij,Pi,colToInt):
         """Several algorithms work on the empirical covariance matrix, formed from the pair and single site
         frequencies.  This function computes the full (gaps included) covariance matrix.  The gap portions
@@ -517,7 +517,7 @@ class MSAAlgorithms(MSA):
             c2List = {}.fromkeys([c for c in self.reducedColumns if c > c1])
             indx1 = colToInt[c1]
             for c2 in c2List:
-                submatrix = Pij[(c1,c2)] - Pi[c1]*Pi[c2].T                
+                submatrix = Pij[(c1,c2)] - Pi[c1]*Pi[c2].T
                 # map to the matrix
                 indx2 = colToInt[c2]
                 covMat[indx1*21:(indx1+1)*21,indx2*21:(indx2+1)*21] = submatrix
@@ -528,10 +528,10 @@ class MSAAlgorithms(MSA):
             covMat[indx1*21:(indx1+1)*21,indx1*21:(indx1+1)*21] = freqs
         return covMat
 
-        
+
     def apc_correction(self,S):
         """
-        Accepts a dictionary of scores S and performs an average product correction (as initially used in 
+        Accepts a dictionary of scores S and performs an average product correction (as initially used in
         MIp) on those scores.  The input score dictionary is modified during this call.
         """
         columnS = {}.fromkeys(self.reducedColumns)
@@ -547,13 +547,13 @@ class MSAAlgorithms(MSA):
             mean2 = mean(columnS[column2])
             apc = (mean1*mean2)/meanS
             S[(column1,column2)] = S[(column1,column2)] - apc
-    
-    
+
+
     def map_potts_DI(self,eij,Pi,ci,cj):
         """
         Methods which involve covariance matrix calculation/inversion need to have some way to convert the
         (q-1)x(q-1) or q x q (depending on method) matrix of couplings for each pair of positions to a single
-        scalar.  One method is the "Direct Information," coming from an assumed two-site model (see
+        scalar.  One method is the "Direct Information," coming from an assumed two-site model (see`
         T. Hwa paper).  This function accepts a matrix of such couplings and returns the (scalar) direct
         information.  This mapping has the benefit of being gauge invariant.
         """
@@ -586,9 +586,9 @@ class MSAAlgorithms(MSA):
         freqprod = Pi[ci]*Pi[cj].T
         nmfDI = multiply(PDI,nan_to_num(log(PDI))).sum() - multiply(PDI,nan_to_num(log(freqprod))).sum()
         return nmfDI
-            
 
- 
+
+
     def calculate_NMI(self):
         """Calculate the mutual information (natural log base) normalized by joint entropy for reducedColumns"""
         self.NMI = {}
@@ -602,7 +602,7 @@ class MSAAlgorithms(MSA):
             except ZeroDivisionError:
                 self.NMI[(column1,column2)] = 0.0
 
-    
+
     def calculate_ZNMI(self):
         """Calculate the z-scored product normalized mutual information (natural log base) for reducedColumns"""
         self.ZNMI = {}
@@ -626,15 +626,15 @@ class MSAAlgorithms(MSA):
             meanProduct = (mean1*var2 + mean2*var1)/float(var1+var2)
             stdProduct = sqrt((var1*var2)/(var1+var2))
             self.ZNMI[(column1,column2)] = (self.NMI[(column1,column2)] - meanProduct)/stdProduct
-    
-    
+
+
     def calculate_MIc(self):
         """Calculate another variant of mutual information [Lee and Kim (2009) Bioinformatics] (natural log base) for reducedColumns"""
         self.MIc = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
         print "calculating mutual information corrected (MIc) . . ."
-        # CAREFUL IN WHAT COMES BELOW - ncols*(ncols-1)/2 IS NOT THE NUMBER OF KEYS IN THE MI DICT DUE TO 
+        # CAREFUL IN WHAT COMES BELOW - ncols*(ncols-1)/2 IS NOT THE NUMBER OF KEYS IN THE MI DICT DUE TO
         #    DROPPING ZEROS
         CPS = {}.fromkeys(self.mutualInformation)
         meanCPS = 0.0
@@ -662,8 +662,8 @@ class MSAAlgorithms(MSA):
         meanCPS = sqrt(meanCPS)
         for column1,column2 in self.mutualInformation:
             self.MIc[(column1,column2)] = self.mutualInformation[(column1,column2)] - CPS[(column1,column2)]/meanCPS
-    
-            
+
+
     def calculate_MIp(self):
         """Calculate the mutual information product [Dunn et al. (2008) Bioinformatics] (natural log base) for reducedColumns"""
         self.MIp = {}
@@ -672,21 +672,21 @@ class MSAAlgorithms(MSA):
         print "calculating mutual information product (MIp) . . ."
         self.MIp = copy.copy(self.mutualInformation)
         self.apc_correction(self.MIp)
-        
-    
+
+
     def calculate_Zres(self):
         """Calculate the z-scored residual mutual information [Little & Chen (2009) PLoS One] (natural log base) for reducedColumns"""
         self.Zres = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
         print "calculating z-scored residual mutual information (Zres) . . ."
-        columnMI = {}.fromkeys(self.reducedColumns)
+        columnMI = {}.fromkeys(self.reducedColumns
         for column in columnMI:
             columnMI[column] = []
         for column1,column2 in self.mutualInformation:
             columnMI[column1].append(self.mutualInformation[(column1,column2)])
             columnMI[column2].append(self.mutualInformation[(column1,column2)])
-        # make lists of MI and the column MI mean products 
+        # make lists of MI and the column MI mean products
         listMI = []
         listProduct = []
         for column1,column2 in self.mutualInformation:
@@ -733,12 +733,12 @@ class MSAAlgorithms(MSA):
             columnMI[column1].append(self.mutualInformation[(column1,column2)])
             columnMI[column2].append(self.mutualInformation[(column1,column2)])
         # make lists of MI and the column MI mean products
-        # use only a fraction for speed (5000 random) 
+        # use only a fraction for speed (5000 random)
         listMI = []
         listProduct = []
         sample = permutation(self.mutualInformation.keys())
         sample = sample.tolist()[:5000]
-        for column1,column2 in sample: 
+        for column1,column2 in sample:
             listMI.append(self.mutualInformation[(column1,column2)])
             listProduct.append(mean(columnMI[column1])*mean(columnMI[column2]))
         # linearly regress out the correlation
@@ -758,7 +758,7 @@ class MSAAlgorithms(MSA):
             mean1,mean2 = mean(columnRes[column1]),mean(columnRes[column2])
             var1,var2 = var(columnRes[column1]),var(columnRes[column2])
             meanProduct = (mean1*var2 + mean2*var1)/float(var1+var2)
-            stdProduct = sqrt((var1*var2)/float(var1+var2))            
+            stdProduct = sqrt((var1*var2)/float(var1+var2))
             # residual must be positive (means can be positive or negative)
             if residual > mean1 and residual > mean2:
                 self.RPMI[(column1,column2)] = (residual - meanProduct)/stdProduct
@@ -793,7 +793,7 @@ class MSAAlgorithms(MSA):
                 # only include non-empty Oij cells
                 self.FCHISQ[(ci,cj)] = chisq[Oij > 0.0].sum()
 
-    
+
     def calculate_SCA(self):
         """Calculate the SCA 3.0 [Halabi (2009) Cell] (natural log base) for reducedColumns"""
         print "calculating statistical coupling analysis (SCA) . . ."
@@ -838,12 +838,12 @@ class MSAAlgorithms(MSA):
             for j in xrange(i+1,Npositions):
                 self.SCA[(integers[i],integers[j])] = scaMatrix[i,j]
 
-    
+
     def calculate_NMF(self):
-        """Calculates an inverse of the sample covariance matrix, in which gaps are not included.  
-        The submatrix norm for each positional pair then gives the score.  This is an alternative to 
-        the "two-site" model of Direct Information; it (supposedly) carries the same 
-        information but does not require self-consistent field calculation.  This algorithm may 
+        """Calculates an inverse of the sample covariance matrix, in which gaps are not included.
+        The submatrix norm for each positional pair then gives the score.  This is an alternative to
+        the "two-site" model of Direct Information; it (supposedly) carries the same
+        information but does not require self-consistent field calculation.  This algorithm may
         behave quite poorly without large numbers of pseudocounts.
         """
         print "calculating NMF . . ."
@@ -886,7 +886,7 @@ class MSAAlgorithms(MSA):
 
     def calculate_nmfDI(self):
         """Calculates the Direct Information (based on an inverse Ising model), using a naive
-        mean-field approximation.  No regularization - beyond pseudocounting if used - is 
+        mean-field approximation.  No regularization - beyond pseudocounting if used - is
         applied to the covariance matrix before inversion.  Thus, this algorithm might behave
         extremely poorly without large numbers of psuedocounts.
         """
@@ -916,7 +916,7 @@ class MSAAlgorithms(MSA):
             for c2 in c2List:
                 indx2 = colToInt[c2]
                 self.nmfDI[(c1,c2)] = self.map_potts_DI(eij[indx1*20:(indx1+1)*20,indx2*20:(indx2+1)*20],self.Pi,c1,c2)
-    
+
 
     def calculate_ipDI(self):
         """
@@ -953,9 +953,9 @@ class MSAAlgorithms(MSA):
                 Jij = log(nan_to_num((multiply(num1,num2)/multiply(den1,den2))))
                 # use DI to get a scalar
                 self.ipDI[(c1,c2)] = self.map_potts_DI(Jij,self.Pi,c1,c2)
-    
-    
-    
+
+
+
     def calculate_smDI(self):
         """
         Seesak-Monasson, using DI to map to a scalar.
@@ -1000,7 +1000,7 @@ class MSAAlgorithms(MSA):
                 self.smDI[(c1,c2)] = self.map_potts_DI(Jloop+J2spin-Jcorr,self.Pi,c1,c2)
 
 
-    
+
     # TAP equations are correct, but it tends to behave poorly (discriminant is often negative)
     def calculate_tapDI(self):
         """
@@ -1038,10 +1038,10 @@ class MSAAlgorithms(MSA):
                 m2 = 1.0 - 2*self.Pi[c2][0:-1]
                 eij = (sqrt(1.0 - 2.0*multiply(m1*m2.T,Cinv)) - 1)/(m1*m2.T)
                 self.tapDI[(c1,c2)] = self.map_potts_DI(eij,self.Pi,c1,c2)
-    
+
 
     def calculate_RIDGE(self):
-        """Uses L2-regularized inversion of the full covariance matrix to calculate pair scores.  In most respects, 
+        """Uses L2-regularized inversion of the full covariance matrix to calculate pair scores.  In most respects,
         this is the L2 equivalent of PSICOV.
         """
         print "calculating RIDGE . . . "
@@ -1107,7 +1107,7 @@ class MSAAlgorithms(MSA):
         sigmaPrior = prior_covariance(covMat,'dense')
         # covMat = empirical_shrinkage(sigmaPrior,covMat)
         covMat = 0.5*covMat + 0.5*sigmaPrior
-        # solve sparse problem:  things depend rather critically on the sparseness parameter        
+        # solve sparse problem:  things depend rather critically on the sparseness parameter
         outDict = rglasso.glasso(asarray(covMat),rho=0.1)
         # overwrite old covariance matrix with the new precision matrix
         covMat = asmatrix(outDict.rx2('wi'))
