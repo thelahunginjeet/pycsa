@@ -44,7 +44,7 @@ from numpy import log2 as log2
 from numpy import exp as exp
 from numpy import power as power
 from numpy import diag, array, mean, std, var, sqrt, nan_to_num, zeros, ones, sort, triu, tril, real_if_close
-from numpy import asmatrix, asarray, matrix, array, multiply, eye, max, min, delete, dot, argmax, sort, hstack
+from numpy import asmatrix, asarray, matrix, array, multiply, eye, max, min, delete, dot, argmax, sort, hstack,argsort
 from numpy.random import randn, permutation
 from numpy.linalg import cholesky, svd, pinv, inv, eig
 from scipy.stats import ks_2samp, linregress
@@ -233,7 +233,7 @@ class MSA(object):
                     self.doublets[(column1,column2)][aaMap[aa1],aaMap[aa2]] += self.seqwts[s]
 
 
-    def calculate_consensus_sequence(self):
+    def calculate_consensus_sequence(self,n=1):
         """
         Computes a consensus sequence for the MSA, by doing the following:
             1. Henikoff weight the alignment
@@ -246,14 +246,16 @@ class MSA(object):
                     S_c(A) = p_c(A)*R_c'
             7. Find max(S_c(A)) over A, for each c.  That's the consensus character.
 
-        If n > 1, the top n scoring characters are returned.
+        If n > 1, the top n scoring characters are returned.  Be aware that for some alignment
+        positions, characters past the top 1-3 may be bogus, as those positions may be heavily
+        gapped and dominated by one or two non-gap characters.
 
         For a rough score interpretation, a nongapped column that is partitioned equally among
         the 20 amino acids will have a score of 0.0.
 
         This function returns an alignment-position indexed dictionary of consensus AAs (this will
-        be a tuple of length n) and score (score is only reported for the highest-scoring character),
-        along with a 20 x Npos matrix of character scores, and a corresponding key to identity of the rows.
+        be a tuple of length n), a key to the row identity of the score matrix, and a
+        a 20 x Npos matrix of character scores.
 
         No pseudocounting is used in determining character frequencies.
         """
@@ -270,11 +272,11 @@ class MSA(object):
             Rscore[c] = (1-self.gaps[c])*(log2(20.0) + 1.0*freqs[c][0:-1].T*log2(freqs[c][0:-1] + 1.0e-12))[0,0]
             # can overwrite the frequency info now (making character scores) and drop the gap
             freqs[c] = Rscore[c]*freqs[c][0:-1]
-            # find the consensus character
-            maxscore = max(freqs[c])
-            maxchar = aminoAcids[argmax(freqs[c])]
-            consensus[c] = (maxchar,maxscore)
-        # last thing is to dump out the whole matrix of scores
+            # find the top n consensus characters
+            # the conversion/flattening is because the singlets (and hence freqs) are stored as np.matrix
+            sortIndx = argsort(asarray(freqs[c]).flatten())[::-1]
+            consensus[c] = tuple([aminoAcids[x] for x in sortIndx[0:n]])
+        # last thing is to assemble and dump out the whole matrix of scores
         orderedCols = sort(freqs.keys())
         firstDone = False
         for c in orderedCols:
@@ -283,10 +285,8 @@ class MSA(object):
                 firstDone = True
             else:
                 scorematrix = hstack([scorematrix,freqs[c]])
+        # use the score matrix to pull out the n top scoring characters
         return consensus,list(aminoAcids[0:-1]),asarray(scorematrix)
-
-
-
 
 
     def calculate_symbol_counts_fast(self):
@@ -680,7 +680,7 @@ class MSAAlgorithms(MSA):
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
         print "calculating z-scored residual mutual information (Zres) . . ."
-        columnMI = {}.fromkeys(self.reducedColumns
+        columnMI = {}.fromkeys(self.reducedColumns)
         for column in columnMI:
             columnMI[column] = []
         for column1,column2 in self.mutualInformation:
