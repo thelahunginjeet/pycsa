@@ -1,10 +1,10 @@
 """
 CEPNetworks.py
 
-This module is used to control all of the pipeline flow and do 
-the reshuffling, etc.  It works with the CEPAlgorithms module which can 
-easily be adapted to include more algorithms.  The main pipeline is initialized 
-with all of the information for the rest of the project. 
+This module is used to control all of the pipeline flow and do
+the reshuffling, etc.  It works with the CEPAlgorithms module which can
+easily be adapted to include more algorithms.  The main pipeline is initialized
+with all of the information for the rest of the project.
 
 @author: Kevin S. Brown (University of Connecticut), Christopher A. Brown (Palomidez LLC)
 
@@ -13,27 +13,27 @@ This source code is provided under the BSD-3 license, duplicated as follows:
 Copyright (c) 2014, Kevin S. Brown and Christopher A. Brown
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, 
+Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice, this 
+1. Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-2. Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or other 
+2. Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or other
 materials provided with the distribution.
 
-3. Neither the name of the University of Connecticut nor the names of its contributors 
-may be used to endorse or promote products derived from this software without specific 
+3. Neither the name of the University of Connecticut nor the names of its contributors
+may be used to endorse or promote products derived from this software without specific
 prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS 
-OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
-AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
@@ -62,7 +62,7 @@ class CEPGraph(nxGraph):
 			raise CEPGraphIOException(nwkFile)
 		except TypeError:
 			super(CEPGraph,self).__init__()
-	
+
 	def is_weighted(self):
 		edges = {'weight':False}
 		for v1,v2 in self.edges():
@@ -70,18 +70,17 @@ class CEPGraph(nxGraph):
 				edges['weight'] = True
 				break
 		return edges['weight']
-	
+
 	def read_network(self,nwkFile):
 		"""Read in a network file to the current graph object"""
 		nwkFile = open(nwkFile,'r')
 		network = nwkFile.readlines()
 		nwkFile.close()
-		# add edges to self (note: int nodes, float edges, float p-values)
+		# add edges to self (note: (+)int nodes, (+/-)float edges, (+)float p-values)
 		for edge in network:
-			link = re.search('(\d+)\t(\d+)\t(\d+\.\d+)\t(\d+\.\d+)',edge)
-			self.add_edge(int(link.group(1)), int(link.group(2)), weight=float(link.group(3)))
-			self.add_edge(int(link.group(1)), int(link.group(2)), pvalue=float(link.group(4)))
-  
+			link = re.search('(\d+)\t(\d+)\t(-?\d+\.\d+)\t(\d+\.\d+)',edge)
+			self.add_edge(int(link.group(1)), int(link.group(2)), weight=float(link.group(3)),pvalue=float(link.group(4)))
+
 	def compute_node_degrees(self):
 		"""Computes the node degree (weighted sum if applicable) for a graph"""
 		degrees = {}
@@ -92,7 +91,7 @@ class CEPGraph(nxGraph):
 			degrees[node] = knode
 		# get half sum of node degrees as well
 		halfDegreeSum = 0.5*(array(degrees.values()).sum())
-		return degrees, halfDegreeSum 
+		return degrees, halfDegreeSum
 
 	def prune_graph(self, threshold):
 		"""Removes all weighted edges below a certain threshold along with orphan nodes"""
@@ -105,16 +104,16 @@ class CEPGraph(nxGraph):
 					self.remove_node(v1)
 				elif len(neighbors2) == 0:
 					self.remove_node(v2)
-	
+
 	def calculate_pvalue(self,number=None):
 		"""Removes edges that aren't significant given their p-values (p > 0.05)
-		Note: all MHT corrections, etc. should be taken care of in the method and 
+		Note: all MHT corrections, etc. should be taken care of in the method and
 		not here (see CEPAlgorithms)"""
 		edges = self.edges()
 		for v1,v2 in edges:
 			if self[v1][v2]['pvalue'] > 0.05:
 				self.remove_edge(v1,v2)
-	
+
 	def calculate_mst(self,number=None):
 		"""Calculates a maximal spanning tree mapping large weights to small weights"""
 		graph = copy.deepcopy(self)
@@ -155,7 +154,7 @@ class CEPGraph(nxGraph):
 				pass
 			else:
 				self.remove_edge(v1,v2)
-	
+
 	def compute_jaccard_index(self,graph):
 		"""Computes the Jaccard index for edges between self and another graph.
 		note: Jaccard index = edge intersection divided by edge union"""
@@ -183,5 +182,3 @@ class CEPNetworksTests(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
-
-
