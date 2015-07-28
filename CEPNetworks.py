@@ -99,7 +99,7 @@ class CEPGraph(nxGraph):
 		for v1,v2 in self.edges():
 			if self[v1][v2]['weight'] < threshold:
 				self.remove_edge(v1,v2)
-		for n in self.nodes()
+		for n in self.nodes():
 			if len(self.neighbors(n)) < 1:
 				self.remove_node(n)
 
