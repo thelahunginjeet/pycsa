@@ -94,16 +94,14 @@ class CEPGraph(nxGraph):
 		return degrees, halfDegreeSum
 
 	def prune_graph(self, threshold):
-		"""Removes all weighted edges below a certain threshold along with orphan nodes"""
+		"""Removes all weighted edges below a certain threshold along with any nodes
+		that have been orphaned (no neighbors) by the pruning process"""
 		for v1,v2 in self.edges():
 			if self[v1][v2]['weight'] < threshold:
 				self.remove_edge(v1,v2)
-				neighbors1 = self.neighbors(v1)
-				neighbors2 = self.neighbors(v2)
-				if len(neighbors1) == 0:
-					self.remove_node(v1)
-				elif len(neighbors2) == 0:
-					self.remove_node(v2)
+		for n in self.nodes()
+			if len(self.neighbors(n)) < 1:
+				self.remove_node(n)
 
 	def calculate_pvalue(self,number=None):
 		"""Removes edges that aren't significant given their p-values (p > 0.05)
