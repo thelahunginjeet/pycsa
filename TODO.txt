@@ -22,3 +22,6 @@ CEPPlotting:
 
 CEPPreprocessing:
 -unit tests?
+
+CEPStructures:
+-fix up calculate_distances_offset
