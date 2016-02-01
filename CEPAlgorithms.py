@@ -404,15 +404,42 @@ class MSAAlgorithms(MSA):
         self.calculate_entropy()
         # sequence weighting
         self.calculate_sequence_weights(method=swtMethod,cutoff=cutoff)
-        # calculate the pair counts
+        # calculate the single and pair counts; this only needs to be done once
         if swtMethod == 'unweighted':
             self.calculate_symbol_counts_fast()
         else:
             self.calculate_symbol_counts()
-        # set pseudocounting parameters
+        # set up pseudocounting parameters and count matrices
         self.set_pseudocounting(pcType,pcMix,pcLambda)
+        # set pseudocounting parameters
+        #self.pcType = pcType
+        #self.pcMix = pcMix
+        #self.pcLambda = pcLambda
         # this is the dictionary of pseudocount types; a tuple of weight, n_i and n_ij are returned
         #   normalization is performed at mixture time
+        # THIS WON'T WORK IF WE WANT TO CHANGE THE PSEUDOCOUNT PARAMETER AFTER CREATION OF THE ALGORITHM!
+        #self.pseudo = {}
+        #self.pseudo['none'] = (0.0, matrix(zeros([21,1], dtype='float64')), matrix(zeros([21,21],dtype='float64')))
+        #self.pseudo['fix'] = (21.0*self.pcLambda/(21.0*self.pcLambda + sum(self.seqwts.values())), matrix(ones([21,1],dtype='float64')), matrix(ones([21,21],dtype='float64')))
+        #self.pseudo['inc'] = (self.pcMix, matrix(ones([21,1],dtype='float64')), matrix(ones([21,21],dtype='float64')))
+        #freqs = 21.0*matrix(array([0.073,0.025,0.05,0.061,0.042,0.072,0.023,0.053,0.064,0.089,0.023,0.043,0.052,0.04,0.052,0.073,0.056,0.063,0.013,0.033,0.0],dtype='float64')).T
+        #self.pseudo['bg'] = (self.pcMix, freqs, freqs*freqs.T)
+        #emfreqs = matrix(zeros([21,1],dtype='float64'))
+        # counts exist at this point, so the empirical frequency counts can be used
+        #for c in self.singlets:
+        #    emfreqs += self.singlets[c]
+        #emfreqs = 21.0*(emfreqs/emfreqs.sum())
+        #self.pseudo['emp'] = (self.pcMix, emfreqs, emfreqs*emfreqs.T)
+
+
+    def set_pseudocounting(self,pcType,pcMix,pcLambda):
+        """Changes the pseudocounting parameters and scheme."""
+        self.pcType = pcType
+        self.pcMix = pcMix
+        self.pcLambda = pcLambda
+        # this is the dictionary of pseudocount types; a tuple of weight, n_i and n_ij are returned
+        #   normalization is performed at mixture time
+        # THIS WON'T WORK IF WE WANT TO CHANGE THE PSEUDOCOUNT PARAMETER AFTER CREATION OF THE ALGORITHM!
         self.pseudo = {}
         self.pseudo['none'] = (0.0, matrix(zeros([21,1], dtype='float64')), matrix(zeros([21,21],dtype='float64')))
         self.pseudo['fix'] = (21.0*self.pcLambda/(21.0*self.pcLambda + sum(self.seqwts.values())), matrix(ones([21,1],dtype='float64')), matrix(ones([21,21],dtype='float64')))
@@ -425,16 +452,9 @@ class MSAAlgorithms(MSA):
             emfreqs += self.singlets[c]
         emfreqs = 21.0*(emfreqs/emfreqs.sum())
         self.pseudo['emp'] = (self.pcMix, emfreqs, emfreqs*emfreqs.T)
-
-
-    def set_pseudocounting(self,pcType,pcMix,pcLambda):
-        self.pcType = pcType
-        self.pcMix = pcMix
-        self.pcLambda = pcLambda
-        # force recalculation of mixtures
-        self.Pij = {}
-        self.Pi = {}
-        # this will force MI recalculation
+        # remix true counts and pseudocounts
+        self.mix_distributions()
+        # this will force MI recalculation for any method that depends on it
         self.mutualInformation = {}
 
 
@@ -491,6 +511,8 @@ class MSAAlgorithms(MSA):
     def mix_distributions(self):
         """Uses the true counts and pseudocounting type to compute effective pair and singlet frequencies.
         """
+        self.Pi = {}
+        self.Pij = {}
         # construct Pi,Pij from true and pseudocounts
         for c1 in self.reducedColumns:
             c2List = {}.fromkeys([c for c in self.reducedColumns if c > c1])
