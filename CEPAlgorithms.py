@@ -52,13 +52,14 @@ from scipy import randn
 from itertools import izip,imap
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
+from sklearn.covariance import graph_lasso
 
 # rpy2 stuff is for the graphical lasso - current python implementations don't work with
 #    the covariance matrix directly, and are therefore utterly useless
 # rpy2 juju follows
-import rpy2.robjects.numpy2ri
-from rpy2.robjects.packages import importr
-rpy2.robjects.numpy2ri.activate()
+#import rpy2.robjects.numpy2ri
+#from rpy2.robjects.packages import importr
+#rpy2.robjects.numpy2ri.activate()
 
 # decorator function to be used for logging purposes
 log_function_call = LogPipeline.log_function_call
@@ -103,6 +104,7 @@ def empirical_shrinkage(sigmaPrior,sigmaSample):
             rho = mu*rho
     # last value of rho gives the minimum shrinkage necessary
     return rho*sigmaPrior + (1.0-rho)*sigmaSample
+
 
 def fractional_similarity(s1,s2):
     """
@@ -411,25 +413,6 @@ class MSAAlgorithms(MSA):
             self.calculate_symbol_counts()
         # set up pseudocounting parameters and count matrices
         self.set_pseudocounting(pcType,pcMix,pcLambda)
-        # set pseudocounting parameters
-        #self.pcType = pcType
-        #self.pcMix = pcMix
-        #self.pcLambda = pcLambda
-        # this is the dictionary of pseudocount types; a tuple of weight, n_i and n_ij are returned
-        #   normalization is performed at mixture time
-        # THIS WON'T WORK IF WE WANT TO CHANGE THE PSEUDOCOUNT PARAMETER AFTER CREATION OF THE ALGORITHM!
-        #self.pseudo = {}
-        #self.pseudo['none'] = (0.0, matrix(zeros([21,1], dtype='float64')), matrix(zeros([21,21],dtype='float64')))
-        #self.pseudo['fix'] = (21.0*self.pcLambda/(21.0*self.pcLambda + sum(self.seqwts.values())), matrix(ones([21,1],dtype='float64')), matrix(ones([21,21],dtype='float64')))
-        #self.pseudo['inc'] = (self.pcMix, matrix(ones([21,1],dtype='float64')), matrix(ones([21,21],dtype='float64')))
-        #freqs = 21.0*matrix(array([0.073,0.025,0.05,0.061,0.042,0.072,0.023,0.053,0.064,0.089,0.023,0.043,0.052,0.04,0.052,0.073,0.056,0.063,0.013,0.033,0.0],dtype='float64')).T
-        #self.pseudo['bg'] = (self.pcMix, freqs, freqs*freqs.T)
-        #emfreqs = matrix(zeros([21,1],dtype='float64'))
-        # counts exist at this point, so the empirical frequency counts can be used
-        #for c in self.singlets:
-        #    emfreqs += self.singlets[c]
-        #emfreqs = 21.0*(emfreqs/emfreqs.sum())
-        #self.pseudo['emp'] = (self.pcMix, emfreqs, emfreqs*emfreqs.T)
 
 
     def set_pseudocounting(self,pcType,pcMix,pcLambda):
@@ -977,7 +960,6 @@ class MSAAlgorithms(MSA):
                 self.ipDI[(c1,c2)] = self.map_potts_DI(Jij,self.Pi,c1,c2)
 
 
-
     def calculate_smDI(self):
         """
         Seesak-Monasson, using DI to map to a scalar.
@@ -1068,7 +1050,6 @@ class MSAAlgorithms(MSA):
         """
         print "calculating RIDGE . . . "
         self.RIDGE = {}
-        rglasso = importr('glasso')
         # ignore heavily gapped columns
         Npositions = len(self.reducedColumns)
         # map column positions to consecutive integers, starting at 0
@@ -1113,7 +1094,7 @@ class MSAAlgorithms(MSA):
         """
         print "calculating PSICOV . . . "
         self.PSICOV = {}
-        rglasso = importr('glasso')
+        #rglasso = importr('glasso')
         # ignore heavily gapped columns
         Npositions = len(self.reducedColumns)
         # map column positions to consecutive integers, starting at 0
@@ -1130,9 +1111,10 @@ class MSAAlgorithms(MSA):
         # covMat = empirical_shrinkage(sigmaPrior,covMat)
         covMat = 0.5*covMat + 0.5*sigmaPrior
         # solve sparse problem:  things depend rather critically on the sparseness parameter
-        outDict = rglasso.glasso(asarray(covMat),rho=0.1)
+        covariance,precision = graph_lasso(asarray(covMat),alpha=0.1)
+        #outDict = rglasso.glasso(asarray(covMat),rho=0.1)
         # overwrite old covariance matrix with the new precision matrix
-        covMat = asmatrix(outDict.rx2('wi'))
+        covMat = asmatrix(precision)
         # compute the PSICOV scores
         for c1 in self.reducedColumns:
             # starting index for 21 x 21 submatrix
