@@ -54,13 +54,6 @@ from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
 from sklearn.covariance import graph_lasso
 
-# rpy2 stuff is for the graphical lasso - current python implementations don't work with
-#    the covariance matrix directly, and are therefore utterly useless
-# rpy2 juju follows
-#import rpy2.robjects.numpy2ri
-#from rpy2.robjects.packages import importr
-#rpy2.robjects.numpy2ri.activate()
-
 # decorator function to be used for logging purposes
 log_function_call = LogPipeline.log_function_call
 
@@ -1094,7 +1087,6 @@ class MSAAlgorithms(MSA):
         """
         print "calculating PSICOV . . . "
         self.PSICOV = {}
-        #rglasso = importr('glasso')
         # ignore heavily gapped columns
         Npositions = len(self.reducedColumns)
         # map column positions to consecutive integers, starting at 0
@@ -1112,7 +1104,6 @@ class MSAAlgorithms(MSA):
         covMat = 0.5*covMat + 0.5*sigmaPrior
         # solve sparse problem:  things depend rather critically on the sparseness parameter
         covariance,precision = graph_lasso(asarray(covMat),alpha=0.1)
-        #outDict = rglasso.glasso(asarray(covMat),rho=0.1)
         # overwrite old covariance matrix with the new precision matrix
         covMat = asmatrix(precision)
         # compute the PSICOV scores
