@@ -467,7 +467,7 @@ class CEPPipeline(object):
         is available to compute the accuracy."""
         nR = len(self.graphs)
         nS = len(self.graphs.values()[0])
-        for partition = self.graphs:
+        for partition in self.graphs:
             for p in self.graphs[partition]:
                 self.statistics['accuracy'][partition] = 0.0
 
