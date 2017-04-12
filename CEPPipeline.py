@@ -438,13 +438,18 @@ class CEPPipeline(object):
         # check that the graphs exist
         if not hasattr(self,'graphs'):
             raise CEPPipelineStatisticsException
-        try:
-            self.distances = CEPStructures.calculate_distances(pdbFile,offset)
-        except IOError:
-            print('No appropriate PDB file found; accuracy will not be calculated.')
-            self.distances = None
-            #raise CEPPipelineStructureIOException(pdbFile)
         else:
+            # graphs exist; deal with the case in which no PDB file is available
+            if pdbFile is not None:
+                # try to find/read the supplied file
+                try:
+                    self.distances = CEPStructures.calculate_distances(pdbFile,offset)
+                except IOError:
+                    raise CEPPipelineStructureIOException(pdbFile)
+            else:
+                # pdbFile is none, so reproducibility cannot be calculated
+                self.distances = None
+            # carry on with the statistics
             self.statistics = {'reproducibility':{}, 'accuracy':{}}
             self.consensusGraph = CEPNetworks.CEPGraph()
             # for dispatch to reproducibility and accuracy functions
