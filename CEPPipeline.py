@@ -1,15 +1,15 @@
 """
 CEPPipeline.py
 
-This module is used to control all of the pipeline flow and do 
-the reshuffling, etc.  It works with the CEPAlgorithms module which can 
-easily be adapted to include more algorithms.  The main pipeline is initialized 
-with all of the information for the rest of the project. 
+This module is used to control all of the pipeline flow and do
+the reshuffling, etc.  It works with the CEPAlgorithms module which can
+easily be adapted to include more algorithms.  The main pipeline is initialized
+with all of the information for the rest of the project.
 
-This is a pure python package for correlated substitution analysis.  Specifically, it can be 
+This is a pure python package for correlated substitution analysis.  Specifically, it can be
 used for the kinds of analyses in the following publication:
 
-"Validation of coevolving residue algorithms via pipeline sensitivity analysis: ELSC and 
+"Validation of coevolving residue algorithms via pipeline sensitivity analysis: ELSC and
 OMES and ZNMI, oh my!" PLoS One, e10779. doi:10.1371/journal.pone.0010779 (2010)
 
 @author: Kevin S. Brown (University of Connecticut), Christopher A. Brown (Palomidez LLC)
@@ -19,27 +19,27 @@ This source code is provided under the BSD-3 license, duplicated as follows:
 Copyright (c) 2014, Kevin S. Brown and Christopher A. Brown
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, 
+Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice, this 
+1. Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-2. Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or other 
+2. Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or other
 materials provided with the distribution.
 
-3. Neither the name of the University of Connecticut nor the names of its contributors 
-may be used to endorse or promote products derived from this software without specific 
+3. Neither the name of the University of Connecticut nor the names of its contributors
+may be used to endorse or promote products derived from this software without specific
 prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS 
-OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
-AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
@@ -66,7 +66,7 @@ def construct_file_name(pieces, subset, extension):
 def deconstruct_file_name(name):
     """Simple function to break apart a file name into individual pieces without the extension"""
     return os.path.splitext(os.path.split(name)[1])[0].split('_')
-    
+
 def determine_split_subset(name):
     """Simple function to return the split (integer) and the subset ('a' or 'b')"""
     tmp = re.findall('\d+',name)[0]
@@ -84,15 +84,15 @@ class CEPPipeline(object):
     @log_function_call('Initialized Pipeline')
     def __init__(self,mainDirectory=None, fileIndicator='cep', canonSequence=None, numPartitions=150, database=None, resamplingMethod='splithalf'):
         """ Main constructor for a project:
-        
+
         fileIndicator -> output string for partitions; default is cep
         canonSequence -> header of the sequence used for numbering of networks; None!
         mainDirectory -> location of ./alignments, ./networks, ./graphs, etc.
         numPartitions -> the number of splits to make (e.g. 200)
-        resamplingMethod -> resampling plan to use: 
+        resamplingMethod -> resampling plan to use:
             splithalf : non-overlapping half splits
             bootstrap : basic bootstrap
-        
+
         Note that not all reproduciblity and accuracy definitions are consistent with all resampling plans.
         """
         if database is not None:
@@ -125,7 +125,7 @@ class CEPPipeline(object):
         strRep += '   Canonical sequence : '+self.canonSequence+'\n'
         strRep += '   Resampling Method: '+self.resamplingMethod+'\n'
         return strRep
-    
+
     @log_function_call('Cleaning Pipeline Project')
     def clean_project(self):
         """Removes all of the files from the partition and network directories along with directory"""
@@ -141,7 +141,7 @@ class CEPPipeline(object):
                 os.remove(os.path.join(partition,f))
             for f in nwkFiles:
                 os.remove(os.path.join(network,f))
-    
+
     @log_function_call('Reading Pipeline Database')
     def read_database(self,dbFile):
         """Reads in a database file with a dictionary keyed by:
@@ -181,16 +181,16 @@ class CEPPipeline(object):
         cPickle.dump(dictionary,dbFile,-1)
         dbFile.close()
 
-    
+
 
     @log_function_call('Resampling Subalignments from Master Alignment')
     def resample_alignment(self,alignmentFile,**kwargs):
         """Makes splits of an input alignment file and write to ./alignments.
         Some plans may require additional arguments, which are simply passed on
         during the dispatching."""
-        if os.path.exists(alignmentFile):  
+        if os.path.exists(alignmentFile):
             self.alignmentFile = alignmentFile
-            self.alignmentExt = os.path.splitext(self.alignmentFile)[1] 
+            self.alignmentExt = os.path.splitext(self.alignmentFile)[1]
             seqDict = SequenceUtilities.read_fasta_sequences(self.alignmentFile)
             # remove bad characters
             # check for the canonical sequence
@@ -221,16 +221,16 @@ class CEPPipeline(object):
         else:
             raise CEPPipelineAlignmentIOException(alignmentFile)
 
-    
+
     @log_function_call('Split Half Resampling')
     def _resample_splithalf(self, stockholm, seqDict, **kwargs):
-        """Split-half resampling.  Randomly partitions the master alignment into 
+        """Split-half resampling.  Randomly partitions the master alignment into
         non-overlapping pairs of subalignments, nResamples number of times.
         """
         for i in xrange(1,self.numPartitions+1):
             halfOne = {}.fromkeys(random.sample(seqDict.keys(),int(len(seqDict)/2)))
             halfOne[self.canonSequence] = seqDict[self.canonSequence]
-            halfTwo = {} 
+            halfTwo = {}
             halfTwo[self.canonSequence] = seqDict[self.canonSequence]
             [halfOne.__setitem__(x,seqDict[x]) for x in halfOne]
             [halfTwo.__setitem__(x,seqDict[x]) for x in seqDict if x not in halfOne]
@@ -243,11 +243,11 @@ class CEPPipeline(object):
             seqFileTwo = os.path.join(self.partitionDirectory,fileNameTwo)
             SequenceUtilities.write_fasta_sequences(halfOne,seqFileOne)
             SequenceUtilities.write_fasta_sequences(halfTwo,seqFileTwo)
-    
+
 
     @log_function_call('Bootstrap Resampling')
     def _resample_bootstrap(self, stockholm, seqDict, **kwargs):
-        """Bootstrap resampling.  Takes the master alignment of N sequences and produces 
+        """Bootstrap resampling.  Takes the master alignment of N sequences and produces
         resampled alignments that also contain N sequences (plus the canonical for numbering),
         but in which sequences can appear more than once.
         """
@@ -274,7 +274,7 @@ class CEPPipeline(object):
     def calculate_networks(self, methodList, subset='*', gap=0.1, pcType='fix', pcMix=0.5, pcLambda=1.0, swtMethod='unweighted',cutoff=0.68):
         """
         Calculates networks using algorithms from CEPAlgorithms.  The methods that are implemented are:
-        
+
         Mutual-information based:
             'mi'     : basic mutual information
             'nmi'    : mutual information normalized by joint entropy
@@ -286,30 +286,30 @@ class CEPPipeline(object):
         Covariance-matrix based:
             'psicov' : sparse inverse covariance matrix estimation
             'ridge'  : L2-regularized inverse covariance matrix estimation
-            'nmf'    : same as nmfdi, but does not compute direct information    
+            'nmf'    : same as nmfdi, but does not compute direct information
         Other:
             'sca'    : Ranganathan's SCA (newer version, ca. 2009)
-            'fchisq' : chi-squared computed from frequencies instead of counts            
+            'fchisq' : chi-squared computed from frequencies instead of counts
         Inverse Potts Model:
             'ipdi'   : independent pair approximation, with DI to convert to a single coupling
             'nmfdi'  : naive mean field (inverse covariance matrix), again with DI
             'tapdi'  : Thouless-Anderson-Palmer with DI
             'smdi'   : Seesak-Monasson with DI
 
-        All methods use pair frequencies computed from resampled (or a single) alignments.  The methodList variable 
-        can therefore be iterable, like a list or tuple.  
-        
-        An optional subset variable can be used to do only 'a' splits or 'b' splits.  The default is to do both 
-        at the same time ('a' first, then 'b').  
-        
-        The default maximum gap percent allowed per column is 0.1.  
-        
-        NOTE: Older algorithms featured in Brown and Brown 2010 ('oldsca', 'omes', 'elsc','mcbasc', and 'random') 
+        All methods use pair frequencies computed from resampled (or a single) alignments.  The methodList variable
+        can therefore be iterable, like a list or tuple.
+
+        An optional subset variable can be used to do only 'a' splits or 'b' splits.  The default is to do both
+        at the same time ('a' first, then 'b').
+
+        The default maximum gap percent allowed per column is 0.1.
+
+        NOTE: Older algorithms featured in Brown and Brown 2010 ('oldsca', 'omes', 'elsc','mcbasc', and 'random')
         have been deprecated and removed
         """
         self.networkExt = '.nwk'
         methodList = [m.lower() for m in methodList]
-        methods = {'mi':'mutualInformation', 'nmi':'NMI', 'znmi':'ZNMI', 'mip':'MIp', 'zres':'Zres', 'sca':'SCA', 
+        methods = {'mi':'mutualInformation', 'nmi':'NMI', 'znmi':'ZNMI', 'mip':'MIp', 'zres':'Zres', 'sca':'SCA',
              'rpmi':'RPMI', 'fchisq':'FCHISQ','mic':'MIc', 'psicov':'PSICOV','nmfdi':'nmfDI','nmf':'NMF',
              'ridge':'RIDGE','tapdi':'tapDI','smdi':'smDI','ipdi':'ipDI'}
         # check that subset is OK
@@ -374,9 +374,9 @@ class CEPPipeline(object):
         if self.resamplingMethod == '_resample_bootstrap':
             for k in self.graphs:
                 self.graphs[k] = {'boot':None}
-            
 
-    
+
+
     @log_function_call('Calculating Graphs from Networks')
     def calculate_graphs(self, method, pruning, number=None):
         """Function reads in networks files and creates graphs from an input pruning tag, for a single method.
@@ -402,11 +402,11 @@ class CEPPipeline(object):
             raise CEPPipelineNetworkException
         elif pruning not in pruningMethods:
             raise CEPPipelinePruningException(pruning)
-    
+
 
     def _calculate_weighted_distance(self,graph,rescaled=True):
-        """Calculates the edge-weighted physical distance for a scoring network.  The weighted distance will almost 
-        certainly fail if the weights are not positive.  Returns both the weight sum and the sum of the weighted 
+        """Calculates the edge-weighted physical distance for a scoring network.  The weighted distance will almost
+        certainly fail if the weights are not positive.  Returns both the weight sum and the sum of the weighted
         distances.  Distance will either be bare physical distance (in Angstroms) or rescaled [0,1] distance, using
         the shortest distance in the protein and the protein diameter."""
         if rescaled == True:
@@ -420,13 +420,13 @@ class CEPPipeline(object):
             weightSum += graph[i][j]['weight']
             distSum += graph[i][j]['weight']*((self.distances[(i,j)]-proteinMinimum)/proteinDiameter)
         return weightSum,distSum
-    
-    
+
+
     @log_function_call('Calculating Resampling Statistics')
     def calculate_resampling_statistics(self,accMethod='distance',repMethod='splithalf',distMethod='oneminus',simMethod='spearman',rescaled=True,number=None, pdbFile=None, offset=0):
         """Calculates the suite of resampling statistics (accuracy, reproducibility, etc.) from the pruned graphs
         produced from the raw scoring networks.
-        
+
         If you choose contact accuracy, distMethod and simMethod are ignored.  The Jaccard index is used for similarity, and
         accuracy is defined as TP/(TP+FP) when comparing the pruned graphs to the closest contact pairs."""
         # check for consistent options
@@ -438,23 +438,45 @@ class CEPPipeline(object):
         # check that the graphs exist
         if not hasattr(self,'graphs'):
             raise CEPPipelineStatisticsException
-        try:
-            self.distances = CEPStructures.calculate_distances(pdbFile,offset)
-        except IOError:
-            raise CEPPipelineStructureIOException(pdbFile)
         else:
+            # graphs exist; deal with the case in which no PDB file is available
+            if pdbFile is not None:
+                # try to find/read the supplied file
+                try:
+                    self.distances = CEPStructures.calculate_distances(pdbFile,offset)
+                except IOError:
+                    raise CEPPipelineStructureIOException(pdbFile)
+            else:
+                # pdbFile is none, so reproducibility cannot be calculated
+                self.distances = None
+            # carry on with the statistics
             self.statistics = {'reproducibility':{}, 'accuracy':{}}
             self.consensusGraph = CEPNetworks.CEPGraph()
             # for dispatch to reproducibility and accuracy functions
             repFunc = '_calculate_rep_'+repMethod
             accFunc = '_calculate_acc_'+accMethod
-            # accuracy can be made one function
-            # self._calculate_accuracy(distMethod,rescaled)
-            getattr(self,accFunc)(distMethod,rescaled)
+            # if there was a problem reading the PDB (or no structure exists!) compute
+            #   a null accuracy that assigns acc = 0 for all the half-splits
+            if self.distances is not None:
+                getattr(self,accFunc)(distMethod,rescaled)
+            else:
+                self._calculate_null_accuracy()
+            # reproducibility can always be calculated
             getattr(self,repFunc)(simMethod)
 
-            
-    
+
+    @log_function_call('Calculating Null Accuracy')
+    def _calculate_null_accuracy(self):
+        """A placeholder accuracy for resamples; simply assigns zero accuracy to every
+        graph.  Useful for situations where reproducibility is desired but no PDB structure
+        is available to compute the accuracy."""
+        nR = len(self.graphs)
+        nS = len(self.graphs.values()[0])
+        for partition in self.graphs:
+            for p in self.graphs[partition]:
+                self.statistics['accuracy'][partition] = 0.0
+
+
     @log_function_call('Calculating Distance-Based Accuracy')
     def _calculate_acc_distance(self,distMethod,rescaled):
         """Calculates distance-based accuracy for resamples; defined as some function of the
@@ -464,7 +486,7 @@ class CEPPipeline(object):
         for partition in self.graphs:
             wSum, dSum = 0.0,0.0
             for p in self.graphs[partition]:
-                # weighted distance sum 
+                # weighted distance sum
                 wS,dS = self._calculate_weighted_distance(self.graphs[partition][p],rescaled)
                 wSum += wS/nS
                 dSum += dS/nS
@@ -481,7 +503,7 @@ class CEPPipeline(object):
         else:
             raise CEPPipelineAccuracyMethodException(distMethod)
 
-    
+
     @log_function_call('Calculating Contact-Based Accuracy')
     def _calculate_acc_contacts(self,distMethod,rescaled):
         """Calculates contact-based accuracy for resamples; after pruning, edge weights are
@@ -504,7 +526,7 @@ class CEPPipeline(object):
                 nE = nE + len(self.graphs[partition][p].edges())
             self.statistics['accuracy'][partition] = TP/nE
 
-    
+
     @log_function_call('Calculating Splithalf Reproducibility')
     def _calculate_rep_splithalf(self,simMethod):
         simFunc = '_graph_similarity_'+simMethod
@@ -521,10 +543,10 @@ class CEPPipeline(object):
                 else:
                     self.consensusGraph.add_edge(i,j,weight=1/norm)
 
-    
+
     @log_function_call('Calculating BICAR Reproducibility')
     def _calculate_rep_bicar(self,simMethod):
-        """Defines reproducibility as the average similarity among all unique pairs of 
+        """Defines reproducibility as the average similarity among all unique pairs of
         resampled graphs."""
         simFunc = '_graph_similarity_'+simMethod
         nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
@@ -544,16 +566,16 @@ class CEPPipeline(object):
                     self.consensusGraph.add_edge(i,j,weight=1/nG)
         # normalize
         self.statistics['reproducibility'][0] = avgSim/norm
-        
-    
+
+
     def _graph_similarity_jaccard(self,gOne,gTwo):
         """Calculates the Jaccard similarity (Jaccard index) for two graphs.  Ignores the
         weights in the graphs; simply uses presence and absence of edges."""
         return gOne.compute_jaccard_index(gTwo)
-        
-    
+
+
     def _graph_similarity_spearman(self,gOne,gTwo):
-        """Calculates the correlational similarity between two graphs, using spearman correlation.  
+        """Calculates the correlational similarity between two graphs, using spearman correlation.
         Similarity is defined as for two half-splits in Brown and Brown, 2010."""
         # edge overlap calculations
         edgeUnion = frozenset(gOne.edges()).union(frozenset(gTwo.edges()))
@@ -592,14 +614,16 @@ class CEPPipeline(object):
         # return pearson correlation
         return pearsonr(eListOne,eListTwo)[0]
 
+
     def _graph_similarity_frobenius(self,gOne,gTwo):
         """Calculates the similarity between two weighted graphs as the Frobenius norm
-        (the sum of the squares of the singular values) of the difference in the (weighted) 
+        (the sum of the squares of the singular values) of the difference in the (weighted)
         adjacency matrices."""
         deltaA = self._adj_matrix_diff(gOne,gTwo)
         normA = np.sqrt((deltaA**2).sum())
         #return np.exp(-1.0*normA)
         return 1.0/(1.0 + normA)
+
 
     def _graph_similarity_spectral(self,gOne,gTwo):
         """Calculates the similarity between two weighted graphs as the spectral norm (largest
@@ -609,7 +633,8 @@ class CEPPipeline(object):
         normA = s[0]
         #return np.exp(-1.0*normA)
         return 1.0/(1.0 + normA)
-    
+
+
     def _graph_similarity_nuclear(self,gOne,gTwo):
         """Calculates the similarity between the two weighted graphs as the nuclear norm (sum of
         the singular values) of the differenc in the weighted adjacency matrices."""
@@ -618,7 +643,6 @@ class CEPPipeline(object):
         normA = s.sum()
         #return np.exp(-1.0*s.sum())
         return 1.0/(1.0 + normA)
-
 
     def _adj_matrix_diff(self,gOne,gTwo):
         """Calculates the difference in weighted adjacency matrices from two input graphs; useful
