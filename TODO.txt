@@ -26,3 +26,9 @@ CEPPreprocessing:
 
 CEPStructures:
 -fix up calculate_distances_offset
+
+OVERALL
+-implement newer accuracy measures (based on ideal performance string)
+-new reproducibility definitions:
+  + 1.0 - spearman_footrule_distance(split1,split2)
+  + 1.0 - kendall_tau_distance(split1,split2)
