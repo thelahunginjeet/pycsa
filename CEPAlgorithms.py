@@ -357,7 +357,7 @@ class MSA(object):
             self.gaps[column] = self.columns[column].count('-')/float(len(self.columns[column]))
 
 
-    def map_to_canonical(datadict, canonical):
+    def map_to_canonical(self,datadict, canonical):
         """
         Remaps a dictionary of values in alignment numbering to be in canonical
         sequence numbering.
