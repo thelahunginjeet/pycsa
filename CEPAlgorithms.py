@@ -357,6 +357,49 @@ class MSA(object):
             self.gaps[column] = self.columns[column].count('-')/float(len(self.columns[column]))
 
 
+    def map_to_canonical(datadict, canonical):
+        """
+        Remaps a dictionary of values in alignment numbering to be in canonical
+        sequence numbering.
+
+        INPUT
+        ------
+            datadict : dictionary, required
+                the datadict can have either single positional keys or a tuple of
+                positions (p1,p2,...,pN).  The tuple can be any size (2 is the most
+                typical case).  Input positions are assumed to be in alignment
+                numbering
+
+            canonical : string, required
+                this should be a key to one of the sequences in the MSA object
+
+        OUTPUT
+        ------
+            mapped : dictionary
+                the dictionary will have the same key structure (single or tuple) as
+                the datadict, but all positions will be with respect to the canonical
+                sequence.  Any position that is gapped in the canonical sequence
+                will be ignored, so the sizes of mapped and datadict can be quite different
+        """
+        # make sure the canonical sequence is present
+        if msa.sequences.keys().count(canonical) == 0:
+            raise MSACanonicalException(canonical)
+        canon = {}
+        mapped = {}
+        for c in self.columns:
+            canon[c] = self.mapping[c][canonical]
+        for k, v in datadict.items():
+            if type(k) == tuple:
+                if sum([canon[x] == None for x in k]) == 0:
+                    newkey = tuple([canon[x] for x in k])
+                    mapped[newkey] = v
+            else:
+                if canon[k] is not None:
+                    newkey = canon[k]
+                    mapped[newkey] = v
+        return mapped
+
+
 
 class MSAAlgorithms(MSA):
     """
@@ -1119,9 +1162,15 @@ class MSAAlgorithms(MSA):
         self.apc_correction(self.PSICOV)
 
 
+class MSACanonicalException(KeyError):
+    def __init__(self,canonical):
+        print "Your canonical sequence, '%s', cannot be found in the alignment."
+
+
 class MSADimensionException(ValueError):
     def __init__(self,alnFile):
-        print "You alignment file, '%s' doesn't appear to have the proper dimensions.  Every sequence should be the same length (aka an alignment).  Please check your input file."%(alnFile)
+        print "Your alignment file, '%s' doesn't appear to have the proper dimensions.  Every sequence should be the same length (aka an alignment).  Please check your input file."%(alnFile)
+
 
 class MSAAlgorithmTests(unittest.TestCase):
     def setUp(self):

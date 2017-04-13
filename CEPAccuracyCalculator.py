@@ -9,6 +9,7 @@ def sort_by_value(D,reverse=False):
     """
     return sorted(D.iteritems(),key=itemgetter(1),reverse=reverse)
 
+
 class ConfusionMatrix(object):
     '''
     The ConfusionMatrix class is designed for working with binary confusion
@@ -132,17 +133,15 @@ class CEPAccuracyCalculator(object):
             numbers in the structure, not in the alignment) with entries equal
             to the values.
         '''
-        # hold the results
-        self.accuracies = {}
         # make performance strings for the classifier-based methods
         Ps,PI = self.make_performance_strings(scores,self.contacts)
         # compute the confusion matrix for TP/FP/etc. methods
         self.confmatrix = ConfusionMatrix(predicted=Ps,actual=PI)
         # now start filling in accuracy methods
-        self.accuracies['hamming'] = self.hamming(Ps,PI)
-        self.accuracies['weighted_hamming'] = self.weighted_hamming(Ps,PI)
-        self.accuracies['bcr'] = self.confmatrix.balanced_classification_rate()
-        self.accuracies['avgdist'] = self.average_distance(scores)
+        accuracies['hamming'] = self.hamming(Ps,PI)
+        accuracies['weighted_hamming'] = self.weighted_hamming(Ps,PI)
+        accuracies['bcr'] = self.confmatrix.balanced_classifcation_rate()
+        accuracies['avgdist'] = self.average_distance(scores)
         return
 
 
@@ -158,7 +157,7 @@ class CEPAccuracyCalculator(object):
         for k in scores:
             if k in self.distances:
                 weightSum += scores[k]
-                distSum += scores[k]*((self.distances[k] - proteinMin)/proteinD)
+                distSum += scores[k]((self.distances[k] - proteinMin)/proteinD)
         return 1.0 - distSum/weightSum
 
 

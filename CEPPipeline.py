@@ -79,6 +79,46 @@ def sample_with_replacement(pop,k):
     return [pop[_int(_random() * n)] for i in itertools.repeat(None,k)]
 
 
+def map_to_canonical(msa, datadict, canonical):
+    """Accept an input MSA object (from CEPAlgorithms.MSA or .MSAAlgorithms) and
+    a dictionary keyed on alignment position and returns a dictionary keyed on
+    position in the canonical sequence.
+
+    INPUT
+    ------
+        msa : CEPAlgorithms.MSA object, required
+
+        datadict : dictionary, required
+            the datadict can have either single positional keys or a tuple of
+            positions (p1,p2,...,pN).  The tuple can be any size (2 is the most
+            typical case).  Input positions are assumed to be in aligment space
+
+        canonical : string, required
+            this should be a key to one of the sequences in the MSA object
+
+    OUTPUT
+    ------
+        mapped : dictionary
+            the dictionary will have the same key structure (single or tuple) as
+            the datadict, but all positions will be with respect to the canonical
+            sequence.  Aligment positions with no canonical equivalent are dropped,
+            so the sizes of mapped and datadict will be quite different"""
+    canon = {}
+    mapped = {}
+    for c in msa.columns:
+        canon[c] = msa.mapping[c][canonical]
+    for k, v in datadict.items():
+        if type(k) == tuple:
+            if sum([canon[x] == None for x in k]) == 0:
+                newkey = tuple([canon[x] for x in k])
+                mapped[newkey] = v
+        else:
+            if canon[k] is not None:
+                newkey = canon[k]
+                mapped[newkey] = v
+    return mapped
+
+
 class CEPPipeline(object):
     """This is the main pipeline class for constructing partitions and networks"""
     @log_function_call('Initialized Pipeline')
@@ -283,13 +323,16 @@ class CEPPipeline(object):
             'rpmi'   : combination of zres and znmi
             'mip'    : product-corrected mutual information
             'mic'    : yet another corrected mutual information
+
         Covariance-matrix based:
             'psicov' : sparse inverse covariance matrix estimation
             'ridge'  : L2-regularized inverse covariance matrix estimation
             'nmf'    : same as nmfdi, but does not compute direct information
+
         Other:
             'sca'    : Ranganathan's SCA (newer version, ca. 2009)
             'fchisq' : chi-squared computed from frequencies instead of counts
+
         Inverse Potts Model:
             'ipdi'   : independent pair approximation, with DI to convert to a single coupling
             'nmfdi'  : naive mean field (inverse covariance matrix), again with DI
@@ -340,7 +383,17 @@ class CEPPipeline(object):
                         methodCall[method]()
                         # check for p-values for writing purposes
                         pvalues = hasattr(msa,'pvalues')
-                        significance = {}
+                        mapped_data = msa.map_to_canonical(msa.__dict__[methods[method]],self.canonSequence)
+                        if pvalues:
+                            significance = msa.map_to_canonical(msa.pvalues,self.canonSequence)
+                        else:
+                            # just put dummy p-values of 1.0 in there
+                            significance = {}.fromkeys(mapped_data)
+                            for k in significance:
+                                significance[k] = 1.0
+                        for ci,cj in mapped_data:
+                            output.write("%d\t%d\t%.8f\t%.8f\n"%(ci,cj,mapped_data[(ci,cj)],significance[(ci,cj)]))
+                        '''
                         # map sequence positions to canonical sequence positions
                         canon = {}
                         for column in msa.columns:
@@ -358,8 +411,10 @@ class CEPPipeline(object):
                         keys = mappedMSA.keys()
                         [mappedMSA.pop(p) for p in keys if None in p]
                         output = open(nwkFile,'w')
+
                         for column1,column2 in mappedMSA:
                             output.write("%d\t%d\t%.8f\t%.8f\n"%(column1,column2,mappedMSA[(column1,column2)],significance[(column1,column2)]))
+                        '''
         else:
             raise CEPPipelineSubsetException(subset)
 
