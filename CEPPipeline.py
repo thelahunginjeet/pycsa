@@ -391,6 +391,7 @@ class CEPPipeline(object):
                             significance = {}.fromkeys(mapped_data)
                             for k in significance:
                                 significance[k] = 1.0
+                        output = open(nwkFile,'w')
                         for ci,cj in mapped_data:
                             output.write("%d\t%d\t%.8f\t%.8f\n"%(ci,cj,mapped_data[(ci,cj)],significance[(ci,cj)]))
                         '''

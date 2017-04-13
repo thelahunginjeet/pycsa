@@ -382,7 +382,7 @@ class MSA(object):
                 will be ignored, so the sizes of mapped and datadict can be quite different
         """
         # make sure the canonical sequence is present
-        if msa.sequences.keys().count(canonical) == 0:
+        if self.sequences.keys().count(canonical) == 0:
             raise MSACanonicalException(canonical)
         canon = {}
         mapped = {}
