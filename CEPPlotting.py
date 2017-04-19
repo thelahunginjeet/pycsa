@@ -308,7 +308,7 @@ class CEPPlotting(object):
             pylab.savefig(os.path.join(self.figDirectory,'network_ring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat)
 
 
-    def net_plot(cep,rcut,ncData=None,layout='neato',cmap=pylab.cm.RdYlGn):
+    def net_plot(self,cep,rcut,ncData=None,layout='neato',cmap=pylab.cm.RdYlGn):
         """
         Draws a pipeline reproducibility graph and saves it or displays it.
         This version uses energy- or force-based layouts, includes node
