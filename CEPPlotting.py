@@ -160,7 +160,7 @@ class CEPPlotting(object):
         if self.figDirectory is None:
             pylab.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'accuracy_reproducibility')+'.'+self.figFormat,format=self.figFormat)
+            pylab.savefig(os.path.join(self.figDirectory,'accuracy_reproducibility')+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
 
 
     def compute_axis_limits(self, *args):
@@ -305,7 +305,7 @@ class CEPPlotting(object):
         if self.figDirectory is None:
             pylab.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'network_ring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat)
+            pylab.savefig(os.path.join(self.figDirectory,'network_ring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
 
 
     def net_plot(self,cep,rcut,ncData=None,layout='neato',cmap=pylab.cm.RdYlGn):
@@ -352,7 +352,7 @@ class CEPPlotting(object):
         if self.figDirectory is None:
             pylab.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'network_spring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat)
+            pylab.savefig(os.path.join(self.figDirectory,'network_spring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
 
 
     '''
