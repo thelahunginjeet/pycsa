@@ -305,7 +305,8 @@ class CEPPlotting(object):
         if self.figDirectory is None:
             pylab.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'network_ring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
+            pylab.savefig(os.path.join(self.figDirectory,'network_ring_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,
+                format=self.figFormat,bbox_inches='tight')
 
 
     def net_plot(self,cep,rcut,ncData=None,layout='neato',cmap=pylab.cm.RdYlGn):
@@ -352,7 +353,8 @@ class CEPPlotting(object):
         if self.figDirectory is None:
             pylab.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'network_spring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
+            pylab.savefig(os.path.join(self.figDirectory,'network_spring_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,
+                format=self.figFormat,bbox_inches='tight')
 
 
     '''
