@@ -261,9 +261,9 @@ class CEPPlotting(object):
 
     def ring_plot(self,cep,rcut,ncData=None,layout='twopi'):
         """
-        Draws a pipeline reproducibility graph and saves it or displays it.
-        The nodes can be positioned on a ring or a series of concentric
-        circles.  In this representation, labels are suppressed.
+        Draws a consensus pipeline reproducibility graph and saves it or
+        displays it. The nodes can be positioned on a ring or a series of
+        concentric circles.  In this representation, labels are suppressed.
 
         Notice that unlike the histogram plotting functions, this function
         can only plot one pipeline (one consensus network).
@@ -284,11 +284,11 @@ class CEPPlotting(object):
         """
         # figure out which edges to plot
         edges_to_show = []
-        for e in cep['graph'].edges():
-            if cep['graph'].get_edge_data(e[0],e[1])['weight'] > rcut:
+        for e in cep.consensusGraph.edges():
+            if cep.consensusGraph.get_edge_data(e[0],e[1])['weight'] > rcut:
                 edges_to_show.append(e)
         # construct node colors
-        nList = cep['graph'].nodes()
+        nList = cep.consensusGraph.nodes()
         nc = ['k' for x in nList]
         if ncData is not None:
             for i in xrange(0,len(nList)):
@@ -297,10 +297,10 @@ class CEPPlotting(object):
         # now make the plot
         pylab.figure(figsize=(8,8))
         if layout == 'radial':
-            pos = nx.circular_layout(cep['graph'])
+            pos = nx.circular_layout(cep.consensusGraph)
         else:
-            pos = nx.nx_pydot.graphviz_layout(cep['graph'],prog=layout)
-        nx.draw_networkx(cep['graph'],pos=pos,edgelist=edges_to_show,node_color=nc,node_size=25,with_labels=False)
+            pos = nx.nx_pydot.graphviz_layout(cep.consensusGraph,prog=layout)
+        nx.draw_networkx(cep.consensusGraph,pos=pos,edgelist=edges_to_show,node_color=nc,node_size=25,with_labels=False)
         pylab.axis('off')
         if self.figDirectory is None:
             pylab.show()
@@ -308,7 +308,7 @@ class CEPPlotting(object):
             pylab.savefig(os.path.join(self.figDirectory,'network_ring_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat)
 
 
-    def net_plot(cep,rcut,saveDir='.',ncData=None,layout='neato',cmap=pylab.cm.RdYlGn):
+    def net_plot(cep,rcut,ncData=None,layout='neato',cmap=pylab.cm.RdYlGn):
         """
         Draws a pipeline reproducibility graph and saves it or displays it.
         This version uses energy- or force-based layouts, includes node
@@ -335,7 +335,7 @@ class CEPPlotting(object):
             node labels are still readable anywhere.
         """
         # copy the graph and prune it
-        G = copy.deepcopy(cep['graph'])
+        G = copy.deepcopy(cep.consensusGraph)
         G.prune_graph(rcut)
         nList = G.nodes()
         nc = [0.0 for x in nList]
