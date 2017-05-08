@@ -55,51 +55,131 @@ class ConfusionMatrix(object):
             self.confmatrix[row,col] += 1
         return
 
-    def classification_accuracy(self):
-        return self.confmatrix.trace()/self.confmatrix.sum()
+    def tp(self):
+        '''
+        True positives.
+        '''
+        return self.confmatrix[0,0]
 
-    def error_rate(self):
-        return (self.confmatrix[0,1] + self.confmatrix[1,0])/self.confmatrix.sum()
+    def tn(self):
+        '''
+        True negatives.
+        '''
+        return self.confmatrix[1,1]
 
-    def precision(self):
-        return self.confmatrix[0,0]/(self.confmatrix[0,0] + self.confmatrix[0,1])
+    def fp(self):
+        '''
+        False positives.
+        '''
+        return self.confmatrix[1,0]
 
-    def sensitivity(self):
-        return self.confmatrix[0,0]/(self.confmatrix[0,0] + self.confmatrix[1,0])
+    def fn(self):
+        '''
+        False negatives.
+        '''
+        return self.confmatrix[0,1]
 
-    def specificity(self):
-        return self.confmatrix[1,1]/(self.confmatrix[1,1] + self.confmatrix[0,1])
+    def P(self):
+        '''
+        Total number of positives.
+        '''
+        return self.tp() + self.fp()
 
-    def positive_likelihood(self):
-        return self.sensitivity()/(1.0 - self.specificity())
+    def N(self):
+        '''
+        Total number of negatives.
+        '''
+        return self.tn() + self.fn()
 
-    def negative_likelihood(self):
-        return self.specificity()/(1.0 - self.sensitivity())
+    def tpr(self):
+        '''
+        True positive rate; also called sensitivity, hit rate, or recall.
+        '''
+        return self.tp()/(self.tp() + self.fn())
 
-    def balanced_classification_rate(self):
-        return 0.5*(self.sensitivity() + self.specificity())
+    def tnr(self):
+        '''
+        True negative rate; also called specificity.
+        '''
+        return self.tn()/(self.tn() + self.fp())
 
-    def balanced_error_rate(self):
-        return 1.0 - self.balanced_classification_rate()
+    def fpr(self):
+        '''
+        False positive rate; also called fallout.
+        '''
+        return self.fp()/(self.fp() + self.tn())
 
-    def f_measure(self):
-        return 2*self.precision()*self.sensitivity()/(self.precision() + self.sensitivity())
+    def fnr(self):
+        '''
+        False negative rate; also called miss rate.
+        '''
+        return self.fn()/(self.fn()+self.tp())
+
+    def ppv(self):
+        '''
+        Positive predictive value; also called precision.
+        '''
+        return self.tp()/(self.tp() + self.fp())
+
+    def npv(self):
+        '''
+        Negative predictive value.
+        '''
+        return self.tn()/(self.tn() + self.fn())
+
+    def fdr(self):
+        '''
+        False discovery rate.
+        '''
+        return 1 - self.ppv()
+
+    def accuracy(self):
+        '''
+        This is the same as Rand's index.
+        '''
+        return (self.tp() + self.tn())/(self.P() + self.N())
+
+    def balanced_accuracy(self):
+        return (self.tp()/self.P() + self.tn()/self.N())/2
+
+    def f1_score(self):
+        '''
+        Harmonic mean of precision and sensitivity.
+        '''
+        return 2.0*self.tp()/(2.0*self.tp() + self.fp() + self.fn())
 
     def g_means(self):
-        return sqrt(self.sensitivity()*self.specificity())
+        return sqrt(self.tpr()*self.tnr())
 
-    def youdens_J(self):
-        return self.sensitivity() - (1.0 - self.specificity())
+    def mcc(self):
+        '''
+        Matthews correlation coefficient; also known as the phi coefficient.
+        '''
+        num = self.tp()*self.tn() - self.fp()*self.fn()
+        A = self.tp() + self.fp()
+        B = self.tp() + self.fn()
+        C = self.tn() + self.fp()
+        D = self.tn() + self.fn()
+        den = sqrt(A*B*C*D)
+        return num/den
 
-    def matthews_correlation(self):
-        N = self.confmatrix.sum()
-        S = (self.confmatrix[0,0]+self.confmatrix[1,0])/N
-        P = (self.confmatrix[0,0]+self.confmatrix[0,0])/N
-        return (self.confmatrix[0,0]/N - S*P)/sqrt(P*S*(1-P)*(1-S))
+    def informedness(self):
+        '''
+        Also called DeltaP' and Youden's J.
+        '''
+        return self.tpr() + self.tnr() - 1
 
-    def discriminant_power(self):
-        return (sqrt(3.0)/pi)*(log(self.positive_likelihood()) + log(self.negative_likelihood()))
+    def markedness(self):
+        '''
+        Also called DeltaP in the psychology literature.
+        '''
+        return self.ppv() + self.npv() - 1
 
+    def dor(self):
+        '''
+        Diagnostic odds rate.
+        '''
+        return (self.tp()*self.tn())/(self.fp()*self.fn())
 
 
 
@@ -116,6 +196,7 @@ class CEPAccuracyCalculator(object):
         self.distances = cepstruc.calculate_distances(pdbFile,modelNumber=modelNumber,chain=chain)
         self.contacts = cepstruc.calculate_CASP_contacts(self.distances)
         self.K = len(self.contacts)
+        self.accuracies = {}
 
 
     def calculate(self,scores):
@@ -138,10 +219,14 @@ class CEPAccuracyCalculator(object):
         # compute the confusion matrix for TP/FP/etc. methods
         self.confmatrix = ConfusionMatrix(predicted=Ps,actual=PI)
         # now start filling in accuracy methods
-        accuracies['hamming'] = self.hamming(Ps,PI)
-        accuracies['weighted_hamming'] = self.weighted_hamming(Ps,PI)
-        accuracies['bcr'] = self.confmatrix.balanced_classifcation_rate()
-        accuracies['avgdist'] = self.average_distance(scores)
+        self.accuracies['hamming'] = self.hamming(Ps,PI)
+        self.accuracies['whamming'] = self.weighted_hamming(Ps,PI)
+        self.accuracies['accuracy'] = self.confmatrix.accuracy()
+        self.accuracies['bacc'] = self.confmatrix.balanced_accuracy()
+        self.accuracies['avgdist'] = self.average_distance(scores)
+        self.accuracies['f1_score'] = self.confmatrix.f1_score()
+        self.accuracies['informedness'] = self.confmatrix.informedness()
+        self.accuracies['mcc'] = self.confmatrix.mcc()
         return
 
 
@@ -164,7 +249,7 @@ class CEPAccuracyCalculator(object):
     def weighted_hamming(self,sx,sy):
         '''
         Computes a positionally weighted hamming distance between the input
-        strings and sy.  The distance is given as:
+        strings sx and sy.  The distance is given as:
 
             H_G = (1/Z) sum_{i=1}^N log(i+1)*(1 - delta(sx_i,sy_i))
 
