@@ -1,4 +1,4 @@
-from numpy import zeros,sqrt,log,pi,mean
+from numpy import zeros,sqrt,log,pi,mean,sort
 from operator import xor,itemgetter
 import pycsa.CEPStructures as cepstruc
 
@@ -133,13 +133,16 @@ class ConfusionMatrix(object):
         '''
         return 1 - self.ppv()
 
-    def accuracy(self):
+    def rand(self):
         '''
-        This is the same as Rand's index.
+        This is sometimes just called the accuracy.
         '''
         return (self.tp() + self.tn())/(self.P() + self.N())
 
-    def balanced_accuracy(self):
+    def bacc(self):
+        '''
+        Balanced (for unequal numbers of P and N) accuracy.
+        '''
         return (self.tp()/self.P() + self.tn()/self.N())/2
 
     def f1_score(self):
@@ -196,16 +199,31 @@ class CEPAccuracyCalculator(object):
         self.distances = cepstruc.calculate_distances(pdbFile,modelNumber=modelNumber,chain=chain)
         self.contacts = cepstruc.calculate_CASP_contacts(self.distances)
         self.K = len(self.contacts)
-        self.accuracies = {}
 
 
-    def calculate(self,scores):
+    def make_performance_strings(self,scores):
         '''
-        Accepts a set of input scores and computes a set of accuracies.  The
-        input scores MUST be mapped to real (canonical sequence) positions,
-        corresponding to the PDB structure supplied in the class constructor.
-        Accuracies computed (see object documentation for the list) are stored
-        in the accuracies dictionary.
+        Accepts a dictionary of scores.  Sorts the scores in descending order and then
+        returns a binary "performance string" which labels scores in the sorted list which
+        are contacts with a '1' and those that are not with a '0'.  An ideal performance string
+        is also constructed, which has #(contacts) 1's followed by #(scores) - #(contacts) 0's.
+        '''
+        # sort the scores in descending order
+        pairs,vals = zip(*sort_by_value(scores,reverse=True))
+        perflist = ['1' if self.contacts.count(p) > 0 else '0' for p in pairs]
+        scorestring  = ''.join(perflist)
+        # make the ideal string
+        K = len(self.contacts)
+        S = len(scores)
+        idealstring = ''.join(['1' for k in xrange(0,K)]+['0' for k in xrange(0,S - K)])
+        return scorestring,idealstring
+
+
+    def calculate(self,scores,method):
+        '''
+        Accepts a set of input scores and computes an accuracy.  The input scores
+        MUST be mapped to real (canonical sequence) positions, corresponding to the
+        PDB structure supplied in the class constructor.
 
         INPUT:
         ------
@@ -213,40 +231,78 @@ class CEPAccuracyCalculator(object):
             This is a dictionary of pair scores, keyed on (ri,rj) (residue
             numbers in the structure, not in the alignment) with entries equal
             to the values.
+
+        method : string, required
+            which method to use to compute the accuracy
+        '''
+        acc = 0.0
+        if method in ('hamming','whamming'):
+            # these rely on the performance and ideal strings
+            Ps,PI = self.make_performance_strings(scores)
+            acc = getattr(self,'acc_'+method)(Ps,PI)
+        elif method in ('rand','bacc','f1_score','informedness','mcc','jaccard'):
+            # these need the confusion matrix between Ps and PI as well, and the
+            #   functions are members of ConfusionMatrix
+            Ps,PI = self.make_performance_strings(scores)
+            self.confmatrix = ConfusionMatrix(predicted=Ps,actual=PI)
+            acc = getattr(self.confusion_matrix,'acc_'+method)()
+        elif method in ('avgdist','contact'):
+            # these need neither; they are kept for historical reasons
+            acc = getattr(self,'acc_'+method)(scores)
+        return acc
         '''
         # make performance strings for the classifier-based methods
         Ps,PI = self.make_performance_strings(scores,self.contacts)
         # compute the confusion matrix for TP/FP/etc. methods
         self.confmatrix = ConfusionMatrix(predicted=Ps,actual=PI)
         # now start filling in accuracy methods
+        self.accuracies['avgdist'] = self.average_distance(scores)
         self.accuracies['hamming'] = self.hamming(Ps,PI)
         self.accuracies['whamming'] = self.weighted_hamming(Ps,PI)
-        self.accuracies['accuracy'] = self.confmatrix.accuracy()
+        self.accuracies['rand'] = self.confmatrix.accuracy()
         self.accuracies['bacc'] = self.confmatrix.balanced_accuracy()
         self.accuracies['avgdist'] = self.average_distance(scores)
         self.accuracies['f1_score'] = self.confmatrix.f1_score()
         self.accuracies['informedness'] = self.confmatrix.informedness()
         self.accuracies['mcc'] = self.confmatrix.mcc()
+        self.accuracies['jaccard'] = self.ppv()
         return
+        '''
+
+    def acc_contact(self,scores):
+        '''
+        Basically a (historically-preserved) version of accuracy that works
+        similarly to the perfomance string versions but on a truncated set of
+        scores.  Basically the Jaccard (TP/(TP + FP)) on the truncated score
+        set, where:
+            TP = top scores which are contacts
+            FP = len(scores) - TP
+        Hence, this definition = TP/len(scores).
+        '''
+        TP = 0
+        for s in scores:
+            # contacts are sorted so that ri < rj, ensure this in the score list
+            s_edge = tuple(sort(s))
+            TP = TP + self.contacts.count(s_edge)
+        return 1.0*TP/len(scores)
 
 
-    def average_distance(self,scores):
+    def acc_avgdist(self,scores):
         '''
         Calculates the scaled edge-weighted physical distance for a set of pair scores.
         The weighted distance will almost certainly fail if the weights are not
         positive.
         '''
-        proteinMin = min(self.distances.values())
-        proteinD = mean(self.distances.values()) - proteinMin
-        weightSum,distSum = 0.0,0.0
-        for k in scores:
-            if k in self.distances:
-                weightSum += scores[k]
-                distSum += scores[k]((self.distances[k] - proteinMin)/proteinD)
-        return 1.0 - distSum/weightSum
+        protein_min = min(self.distances.values())
+        protein_dia = mean(self.distances.values()) - protein_min
+        weight_sum,dist_sum = 0.0,0.0
+        for i,j in scores:
+            weight_sum += scores[(i,j)]
+            dist_sum += scores[(i,j)]*((self.distances[(i,j)] - protein_min)/protein_dia)
+        return 1.0 - dist_sum/weight_sum
 
 
-    def weighted_hamming(self,sx,sy):
+    def acc_whamming(self,sx,sy):
         '''
         Computes a positionally weighted hamming distance between the input
         strings sx and sy.  The distance is given as:
@@ -272,7 +328,7 @@ class CEPAccuracyCalculator(object):
         return 1.0 - wthamm/Z
 
 
-    def hamming(self,sx,sy):
+    def acc_hamming(self,sx,sy):
         '''
         Computes an accuracy based on the Hamming distance between two strings
         of 0's and 1's.  The distance measure is:
@@ -287,22 +343,3 @@ class CEPAccuracyCalculator(object):
             count += 1
             z &= z-1
         return 1.0 - (1.0/(2*self.K))*count
-
-
-    def make_performance_strings(self,scores,contacts):
-        '''
-        Accepts a set of scores and a list of contacts.  Sorts the scores in
-        descending order and then returns a binary "performance string" which
-        labels scores in the sorted list which are contacts with a '1' and those
-        that are not with a '0'.  An ideal performance string is also constructed,
-        which has #(contacts) 1's followed by #(scores) - #(contacts) 0's.
-        '''
-        # sort the scores in descending order
-        pairs,vals = zip(*sort_by_value(scores,reverse=True))
-        perflist = ['1' if contacts.count(p) > 0 else '0' for p in pairs]
-        scorestring  = ''.join(perflist)
-        # make the ideal string
-        K = len(contacts)
-        S = len(scores)
-        idealstring = ''.join(['1' for k in xrange(0,K)]+['0' for k in xrange(0,S - K)])
-        return scorestring,idealstring

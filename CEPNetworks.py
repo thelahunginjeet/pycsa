@@ -153,6 +153,7 @@ class CEPGraph(nxGraph):
 			else:
 				self.remove_edge(v1,v2)
 
+	# this can be removed once the GraphSimilarity module is operational
 	def compute_jaccard_index(self,graph):
 		"""Computes the Jaccard index for edges between self and another graph.
 		note: Jaccard index = edge intersection divided by edge union"""

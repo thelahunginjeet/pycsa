@@ -54,6 +54,7 @@ from pycsa.CEPLogging import LogPipeline
 from pycsa import CEPAlgorithms
 from pycsa import CEPNetworks
 from pycsa import CEPStructures
+from pycsa import CEPAccuracyCalculator
 
 
 # decorator function to be used for logging purposes
@@ -185,9 +186,9 @@ class CEPPipeline(object):
     @log_function_call('Reading Pipeline Database')
     def read_database(self,dbFile):
         """Reads in a database file with a dictionary keyed by:
-        dict['graph'] = <networkx graph object>
-         dict['statistics'] = statistics
-        dict['metadata'] = <instance variables>"""
+            dict['graph'] = <networkx graph object>
+            dict['statistics'] = statistics
+            dict['metadata'] = <instance variables>"""
         # this should set all of the instance variables from the file name
         try:
             dbFile = open(dbFile,'rb')
@@ -204,9 +205,9 @@ class CEPPipeline(object):
     @log_function_call('Writing Pipeline Database')
     def write_database(self):
         """Writes a database file with a dictionary keyed by:
-        dict['graph'] = <networkx graph object>
-         dict['statistics'] = statistics
-        dict['metadata'] = <instance variables>"""
+            dict['graph'] = <networkx graph object>
+            dict['statistics'] = statistics
+            dict['metadata'] = <instance variables>"""
         # write to the default database directory ./database
         if os.path.exists(self.databaseDirectory):
             pass
@@ -348,7 +349,7 @@ class CEPPipeline(object):
         The default maximum gap percent allowed per column is 0.1.
 
         NOTE: Older algorithms featured in Brown and Brown 2010 ('oldsca', 'omes', 'elsc','mcbasc', and 'random')
-        have been deprecated and removed
+        have been deprecated and removed.
         """
         self.networkExt = '.nwk'
         methodList = [m.lower() for m in methodList]
@@ -394,6 +395,7 @@ class CEPPipeline(object):
                         output = open(nwkFile,'w')
                         for ci,cj in mapped_data:
                             output.write("%d\t%d\t%.8f\t%.8f\n"%(ci,cj,mapped_data[(ci,cj)],significance[(ci,cj)]))
+                        # SLATED FOR REMOVAL
                         '''
                         # map sequence positions to canonical sequence positions
                         canon = {}
@@ -459,7 +461,7 @@ class CEPPipeline(object):
         elif pruning not in pruningMethods:
             raise CEPPipelinePruningException(pruning)
 
-
+    # should be able to get rid of this also
     def _calculate_weighted_distance(self,graph,rescaled=True):
         """Calculates the edge-weighted physical distance for a scoring network.  The weighted distance will almost
         certainly fail if the weights are not positive.  Returns both the weight sum and the sum of the weighted
@@ -480,11 +482,31 @@ class CEPPipeline(object):
 
     @log_function_call('Calculating Resampling Statistics')
     def calculate_resampling_statistics(self,accMethod='distance',repMethod='splithalf',distMethod='oneminus',simMethod='spearman',rescaled=True,number=None, pdbFile=None, offset=0):
-        """Calculates the suite of resampling statistics (accuracy, reproducibility, etc.) from the pruned graphs
-        produced from the raw scoring networks.
+        '''
+        Calculates the suite of resampling statistics (accuracy, reproducibility, etc.) from the
+        graphs produced from the raw scoring networks.
 
-        If you choose contact accuracy, distMethod and simMethod are ignored.  The Jaccard index is used for similarity, and
-        accuracy is defined as TP/(TP+FP) when comparing the pruned graphs to the closest contact pairs."""
+        For the full details on available accuracy and graph similarity (reproducibility) methods,
+        see CEPAccuracyCalculator and CEPGraph Similarity.
+
+        Resampling scheme dictates reproducibility method.
+            'splithalf' -> 'splithalf' reproducibility
+            'bootstrap' -> 'avgcorr' reproducibility
+
+        Selected accuracy methods (many more are possible; see CEPAccuracyCalculator):
+            Direct use of scores:
+            -avgdist : scaled, edge-weighted physical distance (used in Brown, Brown 2010 paper)
+            -contact : inferior to performance string methods, but included for historical reasons
+
+            Performance strings:
+            -hamming  : hamming distance between ideal and performance strings
+            -whamming : weighted hamming distance
+            -rand     : rand index
+            -bacc     : balanced accuracy
+            -jaccard  : jaccard index
+
+        Selected reproducibility methods:
+        '''
         # check for consistent options
         if self.resamplingMethod == '_resample_splithalf':
             if repMethod == 'bicar':
@@ -496,31 +518,58 @@ class CEPPipeline(object):
             raise CEPPipelineStatisticsException
         else:
             # graphs exist; deal with the case in which no PDB file is available
+            self.acalc = None
             if pdbFile is not None:
                 # try to find/read the supplied file
                 try:
-                    self.distances = CEPStructures.calculate_distances(pdbFile,offset)
-                except IOError:
+                    self.acalc = CEPAccuracyCalculator.CEPAccuracyCalculator(pdbFile)
+                    #self.distances = CEPStructures.calculate_distances(pdbFile,offset)
+                except:
                     raise CEPPipelineStructureIOException(pdbFile)
-            else:
-                # pdbFile is none, so reproducibility cannot be calculated
-                self.distances = None
             # carry on with the statistics
             self.statistics = {'reproducibility':{}, 'accuracy':{}}
             self.consensusGraph = CEPNetworks.CEPGraph()
-            # for dispatch to reproducibility and accuracy functions
+            # accuracy calculation
+            self.calculate_accuracy(accMethod)
+            # function distpatch and reproducibility calc.
             repFunc = '_calculate_rep_'+repMethod
-            accFunc = '_calculate_acc_'+accMethod
-            # if there was a problem reading the PDB (or no structure exists!) compute
-            #   a null accuracy that assigns acc = 0 for all the half-splits
-            if self.distances is not None:
-                getattr(self,accFunc)(distMethod,rescaled)
-            else:
-                self._calculate_null_accuracy()
-            # reproducibility can always be calculated
             getattr(self,repFunc)(simMethod)
 
 
+    # NEED PRUNING TO GET PASSED IN HERE
+    @log_function_call('Calculating Accuracy')
+    def calculate_accuracy(self,acc_method):
+        '''
+        Loops over all the graphs (all graphs, all splits) and computes accuracy
+        with the help of the accuracy calculator.  If no accuracy calculator
+        exists (because of no struture existing), zero accuracy is assigned
+        to every graph.
+        '''
+        nR = len(self.graphs)
+        nS = len(self.graphs.values()[0])
+        for partition in self.graphs:
+            for p in self.graphs[partition]:
+                acc_avg = 0.0
+                if self.acalc is None:
+                    self.statistics['accuracy'][partition] = 0.0
+                else:
+                    # arrange edges/weights into a dictionary
+                    scores = {}
+                    for e in self.graphs[partition][p].edges():
+                        scores[e] = self.graphs[partition][p].get_edge_data(e[0],e[1])['weight']
+                    # pass the scores to the accuracy calculator
+                    acc_avg += self.acalc.calculate(scores,acc_method)
+                # divide by number of graphs in the partition
+                self.statistics['accuracy'][partition] = acc_avg/len(self.graphs[partition])
+
+
+    # THIS FUNCTION SHOULD MIRROR CALCULATE_ACCURACY, AND ALSO PRODUCE THE CONSENSUS GRAPH
+    @log_function_call('Calculating Reproducibility')
+    def calculate_reproducibility(self,sim_method):
+        return
+
+
+    # this can be removed
     @log_function_call('Calculating Null Accuracy')
     def _calculate_null_accuracy(self):
         """A placeholder accuracy for resamples; simply assigns zero accuracy to every
@@ -532,7 +581,7 @@ class CEPPipeline(object):
             for p in self.graphs[partition]:
                 self.statistics['accuracy'][partition] = 0.0
 
-
+    # should be able to remove
     @log_function_call('Calculating Distance-Based Accuracy')
     def _calculate_acc_distance(self,distMethod,rescaled):
         """Calculates distance-based accuracy for resamples; defined as some function of the
@@ -559,7 +608,7 @@ class CEPPipeline(object):
         else:
             raise CEPPipelineAccuracyMethodException(distMethod)
 
-
+    # should be able to remove
     @log_function_call('Calculating Contact-Based Accuracy')
     def _calculate_acc_contacts(self,distMethod,rescaled):
         """Calculates contact-based accuracy for resamples; after pruning, edge weights are
@@ -582,7 +631,7 @@ class CEPPipeline(object):
                 nE = nE + len(self.graphs[partition][p].edges())
             self.statistics['accuracy'][partition] = TP/nE
 
-
+    # REPRODUCIBILITY CALCS START HERE
     @log_function_call('Calculating Splithalf Reproducibility')
     def _calculate_rep_splithalf(self,simMethod):
         simFunc = '_graph_similarity_'+simMethod
@@ -623,13 +672,13 @@ class CEPPipeline(object):
         # normalize
         self.statistics['reproducibility'][0] = avgSim/norm
 
-
+    # implemented in CEPGraphSimilarity
     def _graph_similarity_jaccard(self,gOne,gTwo):
         """Calculates the Jaccard similarity (Jaccard index) for two graphs.  Ignores the
         weights in the graphs; simply uses presence and absence of edges."""
         return gOne.compute_jaccard_index(gTwo)
 
-
+    # implemented in CEPGraphSimilarity
     def _graph_similarity_spearman(self,gOne,gTwo):
         """Calculates the correlational similarity between two graphs, using spearman correlation.
         Similarity is defined as for two half-splits in Brown and Brown, 2010."""
@@ -650,6 +699,7 @@ class CEPPipeline(object):
         # return spearman correlation
         return spearmanr(eListOne,eListTwo)[0]
 
+    # implemented in CEPGraphSimilarity
     def _graph_similarity_pearson(self,gOne,gTwo):
         """Calculates the correlations similarity between two graphs, using pearson correlation.
         Similarity is defined as for two half-split in Brown and Brown, 2010."""
@@ -670,7 +720,7 @@ class CEPPipeline(object):
         # return pearson correlation
         return pearsonr(eListOne,eListTwo)[0]
 
-
+    # implemented in CEPGraphSimilarity
     def _graph_similarity_frobenius(self,gOne,gTwo):
         """Calculates the similarity between two weighted graphs as the Frobenius norm
         (the sum of the squares of the singular values) of the difference in the (weighted)
@@ -680,7 +730,7 @@ class CEPPipeline(object):
         #return np.exp(-1.0*normA)
         return 1.0/(1.0 + normA)
 
-
+    # implemented in CEPGraphSimilarity
     def _graph_similarity_spectral(self,gOne,gTwo):
         """Calculates the similarity between two weighted graphs as the spectral norm (largest
         singular value) of the difference in the weighted adjacency matrices."""
@@ -690,7 +740,7 @@ class CEPPipeline(object):
         #return np.exp(-1.0*normA)
         return 1.0/(1.0 + normA)
 
-
+    # implemented in CEPGraphSimilarity
     def _graph_similarity_nuclear(self,gOne,gTwo):
         """Calculates the similarity between the two weighted graphs as the nuclear norm (sum of
         the singular values) of the differenc in the weighted adjacency matrices."""
@@ -700,6 +750,7 @@ class CEPPipeline(object):
         #return np.exp(-1.0*s.sum())
         return 1.0/(1.0 + normA)
 
+    # implemented in CEPGraphSimilarity
     def _adj_matrix_diff(self,gOne,gTwo):
         """Calculates the difference in weighted adjacency matrices from two input graphs; useful
         for any similarity measure based norm.  All weighted adjacency matrices are have their
