@@ -51,10 +51,7 @@ import numpy as np
 import Bio.PDB as pdb
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
-from pycsa import CEPAlgorithms
-from pycsa import CEPNetworks
-from pycsa import CEPStructures
-from pycsa import CEPAccuracyCalculator
+from pycsa import CEPAlgorithms,CEPNetworks,CEPAccuracyCalculator
 
 
 # decorator function to be used for logging purposes
@@ -540,11 +537,12 @@ class CEPPipeline(object):
             raise CEPPipelineStatisticsException
         else:
             # graphs exist; deal with the case in which no PDB file is available
-            self.acalc = None
+            self.acc_calc = None
+            self.sim_calc = CEPGraphSimilarity.CEPGraphSimilarity()
             if pdbFile is not None:
                 # try to find/read the supplied file
                 try:
-                    self.acalc = CEPAccuracyCalculator.CEPAccuracyCalculator(pdbFile)
+                    self.acc_calc = CEPAccuracyCalculator.CEPAccuracyCalculator(pdbFile)
                 except:
                     raise CEPPipelineStructureIOException(pdbFile)
             # carry on with the statistics
@@ -582,7 +580,7 @@ class CEPPipeline(object):
         for partition in self.graphs:
             for p in self.graphs[partition]:
                 acc_avg = 0.0
-                if self.acalc is None:
+                if self.acc_calc is None:
                     self.statistics['accuracy'][partition] = 0.0
                 else:
                     # arrange edges/weights into a dictionary
@@ -594,13 +592,12 @@ class CEPPipeline(object):
                     for e in self.graphs[partition][p].edges():
                         scores[e] = self.graphs[partition][p].get_edge_data(e[0],e[1])['weight']
                     # pass the scores to the accuracy calculator
-                    acc_avg += self.acalc.calculate(scores,acc_method)
+                    acc_avg += self.acc_calc.calculate(scores,acc_method)
                 # divide by number of graphs in the partition
                 self.statistics['accuracy'][partition] = acc_avg/len(self.graphs[partition])
 
 
 
-    # THIS FUNCTION SHOULD MIRROR CALCULATE_ACCURACY, AND ALSO PRODUCE THE CONSENSUS GRAPH
     @log_function_call('Calculating Reproducibility')
     def calculate_reproducibility(self,sim_method,pruning,number):
         # XXX print(self.resamplingMethod)
@@ -620,13 +617,14 @@ class CEPPipeline(object):
         Reproduciblity is the split-to-split similarity of the two graphs; each
         split has a reproducibility value.
         '''
-        simFunc = '_graph_similarity_'+simMethod
+        #simFunc = '_graph_similarity_'+simMethod
         norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
         for partition in self.graphs:
             self._prune_graph(partition,'a',pruning,number)
             self._prune_graph(partition,'b',pruning,number)
             # sub-split similarity
-            self.statistics['reproducibility'][partition] = getattr(self,simFunc)(self.graphs[partition]['a'],self.graphs[partition]['b'])
+            self.statistics['reproducibility'][partition] = self.sim_calc.calculate(self.graphs[partition]['a'],self.graphs[partition]['b'],'weight',simMethod)
+            #self.statistics['reproducibility'][partition] = getattr(self,simFunc)(self.graphs[partition]['a'],self.graphs[partition]['b'])
             # consensus graph
             for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
                 if self.consensusGraph.has_edge(i,j):
@@ -650,7 +648,8 @@ class CEPPipeline(object):
                 if int(p2) > int(p1):
                     self._prune_graph(p1,'boot',pruning,number)
                     self._prune_graph(p2,'boot',pruning,number)
-                    avgSim += getattr(self,simFunc)(self.graphs[p1]['boot'],g2 = self.graphs[p2]['boot'])
+                    #avgSim += getattr(self,simFunc)(self.graphs[p1]['boot'],g2 = self.graphs[p2]['boot'])
+                    avgSim += self.sim_calc.calculate(self.graphs[partition]['a'],self.graphs[partition]['b'],'weight',simMethod)
             # consensus graph
             for i,j in self.graphs[p1]['boot'].edges():
                 if self.consensusGraph.has_edge(i,j):

@@ -250,24 +250,7 @@ class CEPAccuracyCalculator(object):
             # these need neither; they are kept for historical reasons
             acc = getattr(self,'acc_'+method)(scores)
         return acc
-        '''
-        # make performance strings for the classifier-based methods
-        Ps,PI = self.make_performance_strings(scores,self.contacts)
-        # compute the confusion matrix for TP/FP/etc. methods
-        self.confmatrix = ConfusionMatrix(predicted=Ps,actual=PI)
-        # now start filling in accuracy methods
-        self.accuracies['avgdist'] = self.average_distance(scores)
-        self.accuracies['hamming'] = self.hamming(Ps,PI)
-        self.accuracies['whamming'] = self.weighted_hamming(Ps,PI)
-        self.accuracies['rand'] = self.confmatrix.accuracy()
-        self.accuracies['bacc'] = self.confmatrix.balanced_accuracy()
-        self.accuracies['avgdist'] = self.average_distance(scores)
-        self.accuracies['f1_score'] = self.confmatrix.f1_score()
-        self.accuracies['informedness'] = self.confmatrix.informedness()
-        self.accuracies['mcc'] = self.confmatrix.mcc()
-        self.accuracies['jaccard'] = self.ppv()
-        return
-        '''
+
 
     def acc_contact(self,scores):
         '''

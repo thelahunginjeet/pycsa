@@ -11,7 +11,7 @@ class CEPGraphSimilarity(object):
     (like Jaccard) do not.
     '''
     def __init__(self):
-        pass
+        return
 
 
     def adj_matrix_diff(self,ga,gb,edata_key='weight'):
@@ -45,7 +45,27 @@ class CEPGraphSimilarity(object):
         return wa/nfa - wb/nfb
 
 
-    def compute_jaccard(self,ga,gb,edata_key='weight'):
+    def calculate(self,ga,gb,edata_key,method):
+        '''
+        Accepts two input graphs (networkx Graphs() or CEPNetwork() objects) and
+        computes their similarity based on the method argument.
+
+        INPUT:
+        ------
+        ga,gb: Graph objects, required
+            each should be a valid networkx object
+
+        edata_key : string, required
+            key for (continuous) edge data
+
+        method : string, required
+            which method to use to compute the similarity
+        '''
+        sim = getattr(self,'sim_'+method)(ga,gb,edata_key)
+        return sim
+
+
+    def sim_jaccard(self,ga,gb,edata_key='weight'):
         '''
         Jaccard similarity.
         '''
@@ -58,7 +78,7 @@ class CEPGraphSimilarity(object):
         return jaccard
 
 
-    def compute_pearson(self,ga,gb,edata_key='weight'):
+    def sim_pearson(self,ga,gb,edata_key='weight'):
         '''
         Pearson correlational similarity between two graphs.
         '''
@@ -80,7 +100,7 @@ class CEPGraphSimilarity(object):
         return pearsonr(e_list_one,e_list_two)[0]
 
 
-    def compute_spearman(self,ga,gb,edata_key='weight'):
+    def sim_spearman(self,ga,gb,edata_key='weight'):
         '''
         Pearson correlational similarity between two graphs.
         '''
@@ -102,7 +122,7 @@ class CEPGraphSimilarity(object):
         return spearmanr(e_list_one,e_list_two)[0]
 
 
-    def compute_frobenius(self,ga,gb,edata_key='weight'):
+    def sim_frobenius(self,ga,gb,edata_key='weight'):
         '''
         Calculates the similarity between two weighted graphs as the Frobenius
         norm (sum of the squares of the singular values) of the difference in
@@ -113,7 +133,7 @@ class CEPGraphSimilarity(object):
         return 1.0/(1.0 + normA)
 
 
-    def calculate_spectral(self,ga,gb,edata_key='weight'):
+    def sim_spectral(self,ga,gb,edata_key='weight'):
         '''
         Calculates the similarity between two weighted graphs as the spectral norm
         (largest singular value) of the difference in the weighted adjacency matrices.
@@ -123,7 +143,7 @@ class CEPGraphSimilarity(object):
         return 1.0/(1.0 + s[0])
 
 
-    def calculate_nuclear(self,ga,gb,edata_key='weight'):
+    def sim_nuclear(self,ga,gb,edata_key='weight'):
         '''
         Calculates the similarity between the two weighted graphs as the nuclear norm
         (sum of the singular values) of the difference in the weighted adjacency matrices.
