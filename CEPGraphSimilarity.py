@@ -85,41 +85,41 @@ class CEPGraphSimilarity(object):
         # edgeset overlap calculations
         e_union = frozenset(ga.edges()).union(gb.edges())
         e_int = frozenset(ga.edges()).intersection(gb.edges())
-        e_uni_a = e_union.difference(gb.edges()))
-        e_uni_b = e_union.difference(ga.edges()))
+        e_uni_a = e_union.difference(gb.edges())
+        e_uni_b = e_union.difference(ga.edges())
         # weights of edges common to both
         e_list_a = [ga.get_edge_data(x[0],x[1])[edata_key] for x in e_int]
         e_list_b = [gb.get_edge_data(x[0],x[1])[edata_key] for x in e_int]
         # edges in a but not in b
-        e_list_one += [ga.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_a]
-        e_list_two += [0.0 for x in e_uni_a]
+        e_list_a += [ga.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_a]
+        e_list_b += [0.0 for x in e_uni_a]
         # edges in b but not in a
-        e_list_one += [0.0 for x in e_uni_b]
-        e_list_two += [gb.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_b]
+        e_list_a += [0.0 for x in e_uni_b]
+        e_list_b += [gb.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_b]
         # compute correlation
-        return pearsonr(e_list_one,e_list_two)[0]
+        return pearsonr(e_list_a,e_list_b)[0]
 
 
     def sim_spearman(self,ga,gb,edata_key='weight'):
         '''
-        Pearson correlational similarity between two graphs.
+        Spearman correlational similarity between two graphs.
         '''
         # edgeset overlap calculations
         e_union = frozenset(ga.edges()).union(gb.edges())
         e_int = frozenset(ga.edges()).intersection(gb.edges())
-        e_uni_a = e_union.difference(gb.edges()))
-        e_uni_b = e_union.difference(ga.edges()))
+        e_uni_a = e_union.difference(gb.edges())
+        e_uni_b = e_union.difference(ga.edges())
         # weights of edges common to both
         e_list_a = [ga.get_edge_data(x[0],x[1])[edata_key] for x in e_int]
         e_list_b = [gb.get_edge_data(x[0],x[1])[edata_key] for x in e_int]
         # edges in a but not in b
-        e_list_one += [ga.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_a]
-        e_list_two += [0.0 for x in e_uni_a]
+        e_list_a += [ga.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_a]
+        e_list_b += [0.0 for x in e_uni_a]
         # edges in b but not in a
-        e_list_one += [0.0 for x in e_uni_b]
-        e_list_two += [gb.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_b]
+        e_list_a += [0.0 for x in e_uni_b]
+        e_list_b += [gb.get_edge_data(x[0],x[1])[edata_key] for x in e_uni_b]
         # compute correlation
-        return spearmanr(e_list_one,e_list_two)[0]
+        return spearmanr(e_list_a,e_list_b)[0]
 
 
     def sim_frobenius(self,ga,gb,edata_key='weight'):
@@ -128,7 +128,7 @@ class CEPGraphSimilarity(object):
         norm (sum of the squares of the singular values) of the difference in
         the (weighted) adjacency matrices.
         '''
-        deltaA = self.adj_matrix_diff(ga,gb,edata_key):
+        deltaA = self.adj_matrix_diff(ga,gb,edata_key)
         normA = sqrt((deltaA**2).sum())
         return 1.0/(1.0 + normA)
 

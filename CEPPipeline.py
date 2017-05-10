@@ -51,7 +51,7 @@ import numpy as np
 import Bio.PDB as pdb
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
-from pycsa import CEPAlgorithms,CEPNetworks,CEPAccuracyCalculator
+from pycsa import CEPAlgorithms,CEPNetworks,CEPAccuracyCalculator,CEPGraphSimilarity
 
 
 # decorator function to be used for logging purposes
