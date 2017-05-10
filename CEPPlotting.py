@@ -187,7 +187,7 @@ class CEPPlotting(object):
             accVals = cep.statistics['accuracy'].values()
             repVals = cep.statistics['reproducibility'].values()
             scatterAx.plot(accVals,repVals,self.cepColors[cep]+self.cepPoints[cep],mec=self.cepColors[cep],alpha=0.5)
-            labelList.append(cep.fileIndicator+' '+str(cep.numSequences)+' '+cep.method+' '+cep.pruning)
+            labelList.append(cep.fileIndicator+' '+str(cep.numSequences)+' '+cep.method)
         scatterAx.set_xlim((self.accMin,self.accMax))
         scatterAx.set_ylim((self.repMin,self.repMax))
         scatterAx.get_xaxis().set_visible(False)
@@ -206,7 +206,7 @@ class CEPPlotting(object):
             lineAx.plot([min(accVals),max(accVals)],[repVal,repVal],self.cepColors[cep]+self.cepLines[cep],alpha=0.5,lw=3)
             l = lineAx.plot([numpy.mean(accVals)],[repVal],self.cepPoints[cep],color=self.cepColors[cep],mfc=self.cepColors[cep],mec=self.cepColors[cep],markersize=12)
             lineList.append(l[0])
-            labelList.append(cep.fileIndicator+' '+str(cep.numSequences)+' '+cep.method+' '+cep.pruning)
+            labelList.append(cep.fileIndicator+' '+str(cep.numSequences)+' '+cep.method)
         # vertical line at right
         lineAx.set_xlim((self.accMin,self.accMax))
         lineAx.set_ylim((self.repMin,self.repMax))

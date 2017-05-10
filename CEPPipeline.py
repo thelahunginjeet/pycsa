@@ -120,6 +120,69 @@ def map_to_canonical(msa, datadict, canonical):
     return mapped
 
 
+class CEPParameters(object):
+    '''
+    Container class to hold the myriad set of parameters for the processing pipeline,
+    and to do checking for inconsistent options.
+    '''
+    def __init__(self,main_directory,alignment_file,canon_sequence):
+        '''
+        Only three absoultely necessary parameters are:
+            main_directory : base project directory
+            alignment_file : master alignment file (FASTA or STOCKHOLM)
+            canon_sequence : canonical sequence for position numbering
+
+        Default parameters and their values:
+            pdb_file          : None (no accuracy will be calculated)
+            fig_directory     : 'figures/'
+            file_indicator    : 'cep'
+            resampling_method : 'splithalf' (split-half resampling)
+            num_partitions    : 100 (100 half-splits)
+            pc_type           : 'inc' (pseudocount value scales with n. of seqs.)
+            pc_lambda         : 1.0 (only used if pc_type = 'fix')
+            pc_mix            : mixture parameter for Preal/Ppseudo (only for pc_type = 'inc')
+            gap               : 1.0 (score all columns, no matter how many gaps)
+            swt_method        : 'henikoff'
+            cutoff            : groups of sequences with fractional_similarity > cutoff share unit weight
+                    (not used for henikoff weighting or no weighting)
+            pruning           : 'mst' (how to prune dense graphs for consensus graph calculation)
+            number            : 100 (the n used for 'topn' or 'bottomn' pruning)
+            acc_method        : 'avgdist' (use the original scaled average distance definition
+                    of Brown and Brown)
+            sim_method        : 'spearman' (how to quantify similarity between split graphs)
+        '''
+        # parameters passed in
+        self.main_directory = main_directory
+        self.alignment_file = alignment_file
+        self.canon_sequence = canon_sequence
+        # defaults for others
+        self.fig_directory = 'figures/'
+        self.pdb_file = None
+        self.file_indicator = 'cep'
+        self.resampling_method = 'splithalf'
+        self.num_partitions = 100
+        self.pc_type = 'inc'
+        self.pc_lambda = 1.0
+        self.pc_mix = 0.1
+        self.gap = 1.0
+        self.swt_method = 'henikoff'
+        self.cutoff = 0.68
+        self.pruning = 'mst'
+        self.number = 100
+        self.acc_method = 'avgdist'
+        self.sim_method = 'spearman'
+
+
+    def set_parameters(self,**kwargs):
+        '''
+        Parameters can be set one at a time directly, but this wrapper just cleans
+        that up by allowing multiple kwargs to be passed in at one time.
+        '''
+        for k in kwargs:
+            setattr(self,k,kwargs[k])
+
+
+
 class CEPPipeline(object):
     """This is the main pipeline class for constructing partitions and networks"""
     @log_function_call('Initialized Pipeline')
@@ -159,6 +222,7 @@ class CEPPipeline(object):
         else:
             raise CEPPipelineDirectoryIOException
 
+
     def __str__(self):
         """String representation of the pipeline."""
         strRep = 'Correlated Substitution Analysis Pipeline\n'
@@ -166,6 +230,7 @@ class CEPPipeline(object):
         strRep += '   Canonical sequence : '+self.canonSequence+'\n'
         strRep += '   Resampling Method: '+self.resamplingMethod+'\n'
         return strRep
+
 
     @log_function_call('Cleaning Pipeline Project')
     def clean_project(self):
@@ -182,6 +247,7 @@ class CEPPipeline(object):
                 os.remove(os.path.join(partition,f))
             for f in nwkFiles:
                 os.remove(os.path.join(network,f))
+
 
     @log_function_call('Reading Pipeline Database')
     def read_database(self,dbFile):
@@ -202,6 +268,7 @@ class CEPPipeline(object):
                 self.__dict__[attribute] = dictionary['metadata'][attribute]
             dbFile.close()
 
+
     @log_function_call('Writing Pipeline Database')
     def write_database(self):
         """Writes a database file with a dictionary keyed by:
@@ -213,7 +280,7 @@ class CEPPipeline(object):
             pass
         else:
             os.mkdir(self.databaseDirectory)
-        dbFile = construct_file_name([self.fileIndicator,self.numSequences,self.method,self.pruning], '', '.pydb')
+        dbFile = construct_file_name([self.fileIndicator,self.numSequences,self.method], '', '.pydb')
         dbFile = os.path.join(self.databaseDirectory,dbFile)
         dbFile = open(dbFile,'wb')
         dictionary = {'graph':self.consensusGraph,'statistics':self.statistics, 'metadata':{}}
@@ -395,32 +462,8 @@ class CEPPipeline(object):
                         output = open(nwkFile,'w')
                         for ci,cj in mapped_data:
                             output.write("%d\t%d\t%.8f\t%.8f\n"%(ci,cj,mapped_data[(ci,cj)],significance[(ci,cj)]))
-                        # SLATED FOR REMOVAL
-                        '''
-                        # map sequence positions to canonical sequence positions
-                        canon = {}
-                        for column in msa.columns:
-                            canon[column] = msa.mapping[column][self.canonSequence]
-                        mappedMSA = {}
-                        for column1,column2 in msa.__dict__[methods[method]]:
-                            mappedMSA[(canon[column1],canon[column2])] = msa.__dict__[methods[method]][(column1,column2)]
-                            if pvalues:
-                                # set the p-value for writing to a network file
-                                significance[(canon[column1],canon[column2])] = msa.pvalues[(column1,column2)]
-                            else:
-                                # fix the p-value at 1.0
-                                significance[(canon[column1],canon[column2])] = 1.0
-                        # remove any column pairs where the canonical is gapped
-                        keys = mappedMSA.keys()
-                        [mappedMSA.pop(p) for p in keys if None in p]
-                        output = open(nwkFile,'w')
-
-                        for column1,column2 in mappedMSA:
-                            output.write("%d\t%d\t%.8f\t%.8f\n"%(column1,column2,mappedMSA[(column1,column2)],significance[(column1,column2)]))
-                        '''
         else:
             raise CEPPipelineSubsetException(subset)
-
 
 
     @log_function_call('Initializing Graphs')
@@ -434,54 +477,32 @@ class CEPPipeline(object):
                 self.graphs[k] = {'boot':None}
 
 
-
-    @log_function_call('Calculating Graphs from Networks')
-    def calculate_graphs(self, method, pruning, number=None):
-        """Function reads in networks files and creates graphs from an input pruning tag, for a single method.
-        Sets self.method = method for subsequent calls to calculate resampling stats and write databases."""
-        pruning = pruning.lower()
-        self.pruning = pruning
+    @log_function_call('Reading Graphs from Network Files')
+    def read_graphs(self, method):
+        '''
+        Function that reads in network files and creates graphs for a single method.
+        Full networks are read in; when graph pruning (to remove poor scores) is
+        required, it is done within the accuracy and reproducibility calculations.
+        '''
+        #pruning = pruning.lower()
+        #self.pruning = pruning
         self.method = method
-        pruningMethods = ('mst','topn','bottomn','pvalue')
-        if hasattr(self,'networkDirectory') and pruning in pruningMethods:
+        #pruningMethods = ('mst','topn','bottomn','pvalue')
+        if hasattr(self,'networkDirectory'):
             self.initialize_graphs()
-            fileNames = construct_file_name([self.fileIndicator,self.numSequences,self.method],'*',self.networkExt)
-            nwkFiles = sorted(glob.glob(os.path.join(self.networkDirectory,fileNames)))
-            for nwkFile in nwkFiles:
-                # initialize graph and methods
-                nwkGraph = CEPNetworks.CEPGraph(nwkFile)
-                gmethods = {'mst':nwkGraph.calculate_mst, 'topn':nwkGraph.calculate_top_n, 'bottomn':nwkGraph.calculate_bottom_n, \
-                'pvalue':nwkGraph.calculate_pvalue}
-                # determine split and subset and construct graph
-                i,j = determine_split_subset(deconstruct_file_name(nwkFile)[-1])
-                gmethods[pruning](number)
-                self.graphs[i][j] = nwkGraph
-        elif not hasattr(self,'networkDirectory'):
-            raise CEPPipelineNetworkException
-        elif pruning not in pruningMethods:
-            raise CEPPipelinePruningException(pruning)
-
-    # should be able to get rid of this also
-    def _calculate_weighted_distance(self,graph,rescaled=True):
-        """Calculates the edge-weighted physical distance for a scoring network.  The weighted distance will almost
-        certainly fail if the weights are not positive.  Returns both the weight sum and the sum of the weighted
-        distances.  Distance will either be bare physical distance (in Angstroms) or rescaled [0,1] distance, using
-        the shortest distance in the protein and the protein diameter."""
-        if rescaled == True:
-            proteinDiameter = mean(self.distances.values()) - min(self.distances.values())
-            proteinMinimum = min(self.distances.values())
+            file_names = construct_file_name([self.fileIndicator,self.numSequences,self.method],'*',self.networkExt)
+            nwk_files = sorted(glob.glob(os.path.join(self.networkDirectory,file_names)))
+            for f in nwk_files:
+                # determine split and subset to store the graph
+                i,j = determine_split_subset(deconstruct_file_name(f)[-1])
+                self.graphs[i][j] = CEPNetworks.CEPGraph(f)
         else:
-            proteinDiameter = 1.0
-            proteinMinimum = 0.0
-        weightSum,distSum = 0.0,0.0
-        for i,j in [x for x in graph.edges() if x in self.distances]:
-            weightSum += graph[i][j]['weight']
-            distSum += graph[i][j]['weight']*((self.distances[(i,j)]-proteinMinimum)/proteinDiameter)
-        return weightSum,distSum
+            raise CEPPipelineNetworkException
+
 
 
     @log_function_call('Calculating Resampling Statistics')
-    def calculate_resampling_statistics(self,accMethod='distance',repMethod='splithalf',distMethod='oneminus',simMethod='spearman',rescaled=True,number=None, pdbFile=None, offset=0):
+    def calculate_resampling_statistics(self,accMethod='distance',repMethod='splithalf',distMethod='oneminus',simMethod='spearman',rescaled=True,pruning=None,number=None,pdbFile=None, offset=0):
         '''
         Calculates the suite of resampling statistics (accuracy, reproducibility, etc.) from the
         graphs produced from the raw scoring networks.
@@ -507,6 +528,7 @@ class CEPPipeline(object):
 
         Selected reproducibility methods:
         '''
+        # THIS DOES NOT NEED TO BE DONE - REP. METHOD IS DETERMINED BY RESAMPLING METHOD
         # check for consistent options
         if self.resamplingMethod == '_resample_splithalf':
             if repMethod == 'bicar':
@@ -523,22 +545,32 @@ class CEPPipeline(object):
                 # try to find/read the supplied file
                 try:
                     self.acalc = CEPAccuracyCalculator.CEPAccuracyCalculator(pdbFile)
-                    #self.distances = CEPStructures.calculate_distances(pdbFile,offset)
                 except:
                     raise CEPPipelineStructureIOException(pdbFile)
             # carry on with the statistics
             self.statistics = {'reproducibility':{}, 'accuracy':{}}
             self.consensusGraph = CEPNetworks.CEPGraph()
             # accuracy calculation
-            self.calculate_accuracy(accMethod)
+            self.calculate_accuracy(accMethod,pruning,number)
+            # reproducibility calculation
+            self.calculate_reproducibility(simMethod,pruning,number)
             # function distpatch and reproducibility calc.
-            repFunc = '_calculate_rep_'+repMethod
-            getattr(self,repFunc)(simMethod)
+            #repFunc = '_calculate_rep_'+repMethod
+            #getattr(self,repFunc)(simMethod)
 
 
-    # NEED PRUNING TO GET PASSED IN HERE
+    def _prune_graph(self,partition,p,pruning,number):
+        '''
+        Prunes a graph according to the input pruning method and number.  Pruning
+        modifies the graph in place, so it only needs to be called once.
+        '''
+        gmethods = {'mst':self.graphs[partition][p].calculate_mst, 'topn':self.graphs[partition][p].calculate_top_n,
+            'bottomn':self.graphs[partition][p].calculate_bottom_n,'pvalue':self.graphs[partition][p].calculate_pvalue}
+        gmethods[pruning](number)
+
+
     @log_function_call('Calculating Accuracy')
-    def calculate_accuracy(self,acc_method):
+    def calculate_accuracy(self,acc_method,pruning,number):
         '''
         Loops over all the graphs (all graphs, all splits) and computes accuracy
         with the help of the accuracy calculator.  If no accuracy calculator
@@ -555,6 +587,10 @@ class CEPPipeline(object):
                 else:
                     # arrange edges/weights into a dictionary
                     scores = {}
+                    # need to prune the graph if we want to use 'avgdist' or 'contact'
+                    if acc_method in ('avgdist','contact'):
+                            self._prune_graph(partition,p,pruning,number)
+                    # assemble the scores
                     for e in self.graphs[partition][p].edges():
                         scores[e] = self.graphs[partition][p].get_edge_data(e[0],e[1])['weight']
                     # pass the scores to the accuracy calculator
@@ -563,86 +599,36 @@ class CEPPipeline(object):
                 self.statistics['accuracy'][partition] = acc_avg/len(self.graphs[partition])
 
 
+
     # THIS FUNCTION SHOULD MIRROR CALCULATE_ACCURACY, AND ALSO PRODUCE THE CONSENSUS GRAPH
     @log_function_call('Calculating Reproducibility')
-    def calculate_reproducibility(self,sim_method):
-        return
-
-
-    # this can be removed
-    @log_function_call('Calculating Null Accuracy')
-    def _calculate_null_accuracy(self):
-        """A placeholder accuracy for resamples; simply assigns zero accuracy to every
-        graph.  Useful for situations where reproducibility is desired but no PDB structure
-        is available to compute the accuracy."""
-        nR = len(self.graphs)
-        nS = len(self.graphs.values()[0])
-        for partition in self.graphs:
-            for p in self.graphs[partition]:
-                self.statistics['accuracy'][partition] = 0.0
-
-    # should be able to remove
-    @log_function_call('Calculating Distance-Based Accuracy')
-    def _calculate_acc_distance(self,distMethod,rescaled):
-        """Calculates distance-based accuracy for resamples; defined as some function of the
-        score-weighted average distance of pairs in the structure."""
-        nR = len(self.graphs)
-        nS = len(self.graphs.values()[0])
-        for partition in self.graphs:
-            wSum, dSum = 0.0,0.0
-            for p in self.graphs[partition]:
-                # weighted distance sum
-                wS,dS = self._calculate_weighted_distance(self.graphs[partition][p],rescaled)
-                wSum += wS/nS
-                dSum += dS/nS
-            self.statistics['accuracy'][partition] = dSum/wSum
-        if distMethod == 'neglog':
-            for k in self.statistics['accuracy']:
-                self.statistics['accuracy'][k] = -1.0*np.log(self.statistics['accuracy'][k])
-        elif distMethod == 'inverse':
-            for k in self.statistics['accuracy']:
-                self.statistics['accuracy'][k] = 1.0/self.statistics['accuracy'][k]
-        elif distMethod == 'oneminus':
-            for k in self.statistics['accuracy']:
-                self.statistics['accuracy'][k] = 1.0 - self.statistics['accuracy'][k]
+    def calculate_reproducibility(self,sim_method,pruning,number):
+        # XXX print(self.resamplingMethod)
+        if self.resamplingMethod == '_resample_splithalf':
+            self._calculate_rep_splithalf(sim_method,pruning,number)
+        elif self.resamplingMethod == '_resample_bootstrap':
+            self._calculate_rep_bootstrap(sim_method,pruning,number)
         else:
-            raise CEPPipelineAccuracyMethodException(distMethod)
+            print('ERROR! Cannot calculate reproducibility.')
 
-    # should be able to remove
-    @log_function_call('Calculating Contact-Based Accuracy')
-    def _calculate_acc_contacts(self,distMethod,rescaled):
-        """Calculates contact-based accuracy for resamples; after pruning, edge weights are
-        ignored and the accuracy is simply defined as TP/(TP + FP), where
-            TP = number of true positives (top scores which are contacts)
-            FP = number of false positives (#edges - TP)
-        Hence, acc = TP/#edges in each network."""
-        nR = len(self.graphs)
-        nS = len(self.graphs.values()[0])
-        contacts = CEPStructures.calculate_CASP_contacts(self.distances,distCut=0)
-        for partition in self.graphs:
-            for p in self.graphs[partition]:
-                TP = 0.0
-                nE = 0.0
-                # TP/#edges
-                for e in self.graphs[partition][p].edges():
-                    # contacts are stored sorted
-                    sEdge = tuple(np.sort(e))
-                    TP = TP + contacts.count(sEdge)
-                nE = nE + len(self.graphs[partition][p].edges())
-            self.statistics['accuracy'][partition] = TP/nE
+
 
     # REPRODUCIBILITY CALCS START HERE
     @log_function_call('Calculating Splithalf Reproducibility')
-    def _calculate_rep_splithalf(self,simMethod):
+    def _calculate_rep_splithalf(self,simMethod,pruning,number):
+        '''
+        Reproduciblity is the split-to-split similarity of the two graphs; each
+        split has a reproducibility value.
+        '''
         simFunc = '_graph_similarity_'+simMethod
         norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
         for partition in self.graphs:
-            gA = self.graphs[partition]['a']
-            gB = self.graphs[partition]['b']
+            self._prune_graph(partition,'a',pruning,number)
+            self._prune_graph(partition,'b',pruning,number)
             # sub-split similarity
-            self.statistics['reproducibility'][partition] = getattr(self,simFunc)(gA,gB)
+            self.statistics['reproducibility'][partition] = getattr(self,simFunc)(self.graphs[partition]['a'],self.graphs[partition]['b'])
             # consensus graph
-            for i,j in gA.edges()+gB.edges():
+            for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
                 if self.consensusGraph.has_edge(i,j):
                     self.consensusGraph[i][j]['weight'] += 1/norm
                 else:
@@ -650,9 +636,11 @@ class CEPPipeline(object):
 
 
     @log_function_call('Calculating BICAR Reproducibility')
-    def _calculate_rep_bicar(self,simMethod):
-        """Defines reproducibility as the average similarity among all unique pairs of
-        resampled graphs."""
+    def _calculate_rep_bootstrap(self,simMethod,pruning,number):
+        '''
+        Reproducibility is the average similarity among all unique pairs of
+        resampled graphs; there is only a single reproducibility value.
+        '''
         simFunc = '_graph_similarity_'+simMethod
         nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
         norm = (nG*(nG-1.0))/2.0
@@ -660,9 +648,9 @@ class CEPPipeline(object):
         for p1 in self.graphs:
             for p2 in self.graphs:
                 if int(p2) > int(p1):
-                    g1 = self.graphs[p1]['boot']
-                    g2 = self.graphs[p2]['boot']
-                    avgSim += getattr(self,simFunc)(g1,g2)
+                    self._prune_graph(p1,'boot',pruning,number)
+                    self._prune_graph(p2,'boot',pruning,number)
+                    avgSim += getattr(self,simFunc)(self.graphs[p1]['boot'],g2 = self.graphs[p2]['boot'])
             # consensus graph
             for i,j in self.graphs[p1]['boot'].edges():
                 if self.consensusGraph.has_edge(i,j):
@@ -671,6 +659,7 @@ class CEPPipeline(object):
                     self.consensusGraph.add_edge(i,j,weight=1/nG)
         # normalize
         self.statistics['reproducibility'][0] = avgSim/norm
+
 
     # implemented in CEPGraphSimilarity
     def _graph_similarity_jaccard(self,gOne,gTwo):
@@ -849,7 +838,7 @@ class CEPPipelineDistanceMethodException(Exception):
 class CEPPipelineStatisticsException(Exception):
     @log_function_call('ERROR: Graphs Not Present')
     def __init__(self):
-        print "Graphs need to be calculated before statistics can be calculated.  Run calculate_graphs() then try again."
+        print "Graphs need to be loaded before statistics can be calculated.  Run read_graphs() then try again."
 
 class CEPPipelineTests(unittest.TestCase):
     def setUp(self):
