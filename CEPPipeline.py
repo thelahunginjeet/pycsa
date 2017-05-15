@@ -216,6 +216,8 @@ class CEPPipeline(object):
             self.resamplingMethod = '_resample_'+resamplingMethod
             if not hasattr(self,self.resamplingMethod):
                 raise CEPPipelineResamplingMethodException(resamplingMethod)
+            # initialize the statistics, even if not all are calculated
+            self.statistics = {'reproducibility':{}, 'accuracy':{}}
         else:
             raise CEPPipelineDirectoryIOException
 
@@ -549,7 +551,7 @@ class CEPPipeline(object):
             self.statistics = {'reproducibility':{}, 'accuracy':{}}
             self.consensusGraph = CEPNetworks.CEPGraph()
             # accuracy calculation
-            self.calculate_accuracy(accMethod,pruning,number)
+            self.calculate_accuracy(accMethod,pruning,number,pdbFile)
             # reproducibility calculation
             self.calculate_reproducibility(simMethod,pruning,number)
             # function distpatch and reproducibility calc.
@@ -568,13 +570,17 @@ class CEPPipeline(object):
 
 
     @log_function_call('Calculating Accuracy')
-    def calculate_accuracy(self,acc_method,pruning,number):
+    def calculate_accuracy(self,acc_method,pruning,number,pdb_file):
         '''
         Loops over all the graphs (all graphs, all splits) and computes accuracy
         with the help of the accuracy calculator.  If no accuracy calculator
         exists (because of no struture existing), zero accuracy is assigned
         to every graph.
         '''
+        try:
+            self.acc_calc = CEPAccuracyCalculator.CEPAccuracyCalculator(pdb_file)
+        except:
+            raise CEPPipelineStructureIOException(pdb_file)
         nR = len(self.graphs)
         nS = len(self.graphs.values()[0])
         for partition in self.graphs:
@@ -600,7 +606,7 @@ class CEPPipeline(object):
 
     @log_function_call('Calculating Reproducibility')
     def calculate_reproducibility(self,sim_method,pruning,number):
-        # XXX print(self.resamplingMethod)
+        self.sim_calc = CEPGraphSimilarity.CEPGraphSimilarity()
         if self.resamplingMethod == '_resample_splithalf':
             self._calculate_rep_splithalf(sim_method,pruning,number)
         elif self.resamplingMethod == '_resample_bootstrap':
@@ -609,8 +615,38 @@ class CEPPipeline(object):
             print('ERROR! Cannot calculate reproducibility.')
 
 
+    @log_function_call('Calculating Consensus Graph')
+    def calculate_consensus_graph(self,pruning,number):
+        '''
+        The consensus graph's edges are the number of resamples in which that edge
+        occured in the pruned set of edges.
+        '''
+        self.consensusGraph = CEPNetworks.CEPGraph()
+        if self.resamplingMethod == '_resample_splithalf':
+            norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+            for partition in self.graphs:
+                self._prune_graph(partition,'a',pruning,number)
+                self._prune_graph(partition,'b',pruning,number)
+                for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
+                    if self.consensusGraph.has_edge(i,j):
+                        self.consensusGraph[i][j]['weight'] += 1/norm
+                    else:
+                        self.consensusGraph.add_edge(i,j,weight=1/norm)
+        elif self.resamplingMethod == '_resample_bootstrap':
+            nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+            norm = (nG*(nG-1.0))/2.0
+            for partition in self.graphs:
+                self._prune_graph(partition,'boot',pruning,number)
+                for i,j in self.graphs[partition]['boot'].edges():
+                    if self.consensusGraph.has_edge(i,j):
+                        self.consensusGraph[i][j]['weight'] += 1/nG
+                    else:
+                        self.consensusGraph.add_edge(i,j,weight=1/nG)
+        else:
+            print('ERROR! Cannot calculate consensus graph.')
 
-    # REPRODUCIBILITY CALCS START HERE
+
+
     @log_function_call('Calculating Splithalf Reproducibility')
     def _calculate_rep_splithalf(self,simMethod,pruning,number):
         '''
@@ -618,7 +654,7 @@ class CEPPipeline(object):
         split has a reproducibility value.
         '''
         #simFunc = '_graph_similarity_'+simMethod
-        norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+        #norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
         for partition in self.graphs:
             self._prune_graph(partition,'a',pruning,number)
             self._prune_graph(partition,'b',pruning,number)
@@ -626,11 +662,11 @@ class CEPPipeline(object):
             self.statistics['reproducibility'][partition] = self.sim_calc.calculate(self.graphs[partition]['a'],self.graphs[partition]['b'],'weight',simMethod)
             #self.statistics['reproducibility'][partition] = getattr(self,simFunc)(self.graphs[partition]['a'],self.graphs[partition]['b'])
             # consensus graph
-            for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
-                if self.consensusGraph.has_edge(i,j):
-                    self.consensusGraph[i][j]['weight'] += 1/norm
-                else:
-                    self.consensusGraph.add_edge(i,j,weight=1/norm)
+            #for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
+            #    if self.consensusGraph.has_edge(i,j):
+            #        self.consensusGraph[i][j]['weight'] += 1/norm
+            #    else:
+            #        self.consensusGraph.add_edge(i,j,weight=1/norm)
 
 
     @log_function_call('Calculating BICAR Reproducibility')
@@ -649,13 +685,13 @@ class CEPPipeline(object):
                     self._prune_graph(p1,'boot',pruning,number)
                     self._prune_graph(p2,'boot',pruning,number)
                     #avgSim += getattr(self,simFunc)(self.graphs[p1]['boot'],g2 = self.graphs[p2]['boot'])
-                    avgSim += self.sim_calc.calculate(self.graphs[partition]['a'],self.graphs[partition]['b'],'weight',simMethod)
+                    avgSim += self.sim_calc.calculate(self.graphs[p1]['boot'],self.graphs[p2]['boot'],'weight',simMethod)
             # consensus graph
-            for i,j in self.graphs[p1]['boot'].edges():
-                if self.consensusGraph.has_edge(i,j):
-                    self.consensusGraph[i][j]['weight'] += 1/nG
-                else:
-                    self.consensusGraph.add_edge(i,j,weight=1/nG)
+            #for i,j in self.graphs[p1]['boot'].edges():
+            #    if self.consensusGraph.has_edge(i,j):
+            #        self.consensusGraph[i][j]['weight'] += 1/nG
+            #    else:
+            #        self.consensusGraph.add_edge(i,j,weight=1/nG)
         # normalize
         self.statistics['reproducibility'][0] = avgSim/norm
 

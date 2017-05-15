@@ -20,11 +20,11 @@ NOT prune for any performance-string based accuracies to work.
 
 CEPReproduciblityCalculator:
 -push all reproducibility calculations into an object like the accuracy calculator; helps to
-streamline CEPPipeline and reduce confusion.
--should actually call this CEPGraphSimilarity module
+streamline CEPPipeline and reduce confusion. #done
+-should actually call this CEPGraphSimilarity module #done
 
 CEPPlotting:
--utility for nice plot of consensus graphs
+-utility for nice plot of consensus graphs #done
 -flag for turning legend on and off
 -remove/update deprecated plotting functions
 
@@ -40,6 +40,7 @@ CEPOptions:
 (roughly 10-12 parameters can take default values)
 -pass this around (or pull parameters out of it)
 -put in an options checker that gets run after any option is set
+-write the options to the database at the end!
 
 
 OVERALL
@@ -53,7 +54,7 @@ list of methods, rank aggregates, etc.)
 -current reproducibility calculations ALWAYS prune the graphs
 -would be *great* longer-term to have reproducibility measures that don't involve any pruning?
 except is there ANY way to get the consensus graph without pruning?
--implement newer accuracy measures (based on ideal performance string)
+-implement newer accuracy measures (based on ideal performance string) #done
 -new reproducibility definitions:
   + 1.0 - spearman_footrule_distance(split1,split2)
   + 1.0 - kendall_tau_distance(split1,split2)
