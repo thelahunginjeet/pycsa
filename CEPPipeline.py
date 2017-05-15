@@ -183,39 +183,33 @@ class CEPParameters(object):
 class CEPPipeline(object):
     """This is the main pipeline class for constructing partitions and networks"""
     @log_function_call('Initialized Pipeline')
-    def __init__(self,mainDirectory=None, fileIndicator='cep', canonSequence=None, numPartitions=150, database=None, resamplingMethod='splithalf'):
-        """ Main constructor for a project:
+    def __init__(self,options,database=None):
+        """ Main constructor for a processing pipeline.
 
-        fileIndicator -> output string for partitions; default is cep
-        canonSequence -> header of the sequence used for numbering of networks; None!
-        mainDirectory -> location of ./alignments, ./networks, ./graphs, etc.
-        numPartitions -> the number of splits to make (e.g. 200)
-        resamplingMethod -> resampling plan to use:
-            splithalf : non-overlapping half splits
-            bootstrap : basic bootstrap
-
-        Note that not all reproduciblity and accuracy definitions are consistent with all resampling plans.
+        All pipeline options/parameters are contained in a CEPParameters object.
         """
+        self.options = options
         if database is not None:
-            # start a project by reading in an archived database
+            # start a project by reading in an archived database, along with the
+            #   options archived there
             if os.path.exists(database):
                 self.read_database(database)
             else:
                 raise CEPPipelineDatabaseIOException(database)
-        elif database == None and mainDirectory is not None:
-            if not os.path.exists(mainDirectory):
-                os.mkdir(mainDirectory)
+        elif database == None and self.options.main_directory is not None:
+            if not os.path.exists(self.options.main_directory):
+                os.mkdir(self.options.main_directory)
             # establish basic instance variables for a new project
-            self.mainDirectory = mainDirectory
-            self.databaseDirectory = os.path.join(self.mainDirectory,'databases')
-            self.networkDirectory = os.path.join(self.mainDirectory,'networks')
-            self.fileIndicator = fileIndicator
-            self.canonSequence = canonSequence
-            self.numPartitions = numPartitions
+            #self.mainDirectory = mainDirectory
+            self.database_directory = os.path.join(self.options.main_directory,'databases')
+            self.network_directory = os.path.join(self.options.main_directory,'networks')
+            #self.options.file_indicator = fileIndicator
+            #self.options.canon_sequence = canonSequence
+            #self.options.num_partitions = numPartitions
             # check for a valid resampling plan
-            self.resamplingMethod = '_resample_'+resamplingMethod
-            if not hasattr(self,self.resamplingMethod):
-                raise CEPPipelineResamplingMethodException(resamplingMethod)
+            self.resampling_method = '_resample_'+self.options.resampling_method
+            if not hasattr(self,self.resampling_method):
+                raise CEPPipelineResamplingMethodException(self.options.resampling_method)
             # initialize the statistics, even if not all are calculated
             self.statistics = {'reproducibility':{}, 'accuracy':{}}
         else:
@@ -225,17 +219,17 @@ class CEPPipeline(object):
     def __str__(self):
         """String representation of the pipeline."""
         strRep = 'Correlated Substitution Analysis Pipeline\n'
-        strRep += '   Results stored in '+self.mainDirectory+'\n'
-        strRep += '   Canonical sequence : '+self.canonSequence+'\n'
-        strRep += '   Resampling Method: '+self.resamplingMethod+'\n'
+        strRep += '   Results stored in '+self.options.main_directory+'\n'
+        strRep += '   Canonical sequence : '+self.options.canon_sequence+'\n'
+        strRep += '   Resampling Method: '+self.options.resampling_method+'\n'
         return strRep
 
 
     @log_function_call('Cleaning Pipeline Project')
     def clean_project(self):
         """Removes all of the files from the partition and network directories along with directory"""
-        partition = os.path.join(self.mainDirectory,'alignments')
-        network = os.path.join(self.mainDirectory,'networks')
+        partition = os.path.join(self.options.main_directory,'alignments')
+        network = os.path.join(self.options.main_directory,'networks')
         try:
             alnFiles=os.listdir(partition)
             nwkFiles=os.listdir(network)
@@ -249,23 +243,24 @@ class CEPPipeline(object):
 
 
     @log_function_call('Reading Pipeline Database')
-    def read_database(self,dbFile):
+    def read_database(self,db_file):
         """Reads in a database file with a dictionary keyed by:
             dict['graph'] = <networkx graph object>
             dict['statistics'] = statistics
             dict['metadata'] = <instance variables>"""
         # this should set all of the instance variables from the file name
         try:
-            dbFile = open(dbFile,'rb')
+            db_ptr = open(db_file,'rb')
         except IOError:
-            raise CEPPipelineDatabaseIOException(dbFile)
+            raise CEPPipelineDatabaseIOException(db_file)
         else:
-            dictionary = cPickle.load(dbFile)
-            self.consensusGraph = dictionary['graph']
+            dictionary = cPickle.load(db_ptr)
+            self.consensus_graph = dictionary['graph']
             self.statistics = dictionary['statistics']
+            self.options = dictionary['options']
             for attribute in dictionary['metadata']:
                 self.__dict__[attribute] = dictionary['metadata'][attribute]
-            dbFile.close()
+            db_ptr.close()
 
 
     @log_function_call('Writing Pipeline Database')
@@ -273,112 +268,114 @@ class CEPPipeline(object):
         """Writes a database file with a dictionary keyed by:
             dict['graph'] = <networkx graph object>
             dict['statistics'] = statistics
+            dict['options'] = set of options that produced the database file
             dict['metadata'] = <instance variables>"""
         # write to the default database directory ./database
-        if os.path.exists(self.databaseDirectory):
+        if os.path.exists(self.database_directory):
             pass
         else:
-            os.mkdir(self.databaseDirectory)
-        dbFile = construct_file_name([self.fileIndicator,self.numSequences,self.method], '', '.pydb')
-        dbFile = os.path.join(self.databaseDirectory,dbFile)
-        dbFile = open(dbFile,'wb')
-        dictionary = {'graph':self.consensusGraph,'statistics':self.statistics, 'metadata':{}}
+            os.mkdir(self.database_directory)
+        db_file = construct_file_name([self.options.file_indicator,self.num_sequences,self.method], '', '.pydb')
+        db_file = os.path.join(self.database_directory,db_file)
+        db_ptr = open(db_file,'wb')
+        dictionary = {'graph':self.consensus_graph,'statistics':self.statistics, 'options':self.options, 'metadata':{}}
         for attribute in self.__dict__:
             dictionary['metadata'][attribute] = self.__dict__[attribute]
-        cPickle.dump(dictionary,dbFile,-1)
-        dbFile.close()
+        cPickle.dump(dictionary,db_ptr,-1)
+        db_ptr.close()
 
 
 
     @log_function_call('Resampling Subalignments from Master Alignment')
-    def resample_alignment(self,alignmentFile,**kwargs):
+    def resample_alignment(self,**kwargs):
         """Makes splits of an input alignment file and write to ./alignments.
         Some plans may require additional arguments, which are simply passed on
         during the dispatching."""
-        if os.path.exists(alignmentFile):
-            self.alignmentFile = alignmentFile
-            self.alignmentExt = os.path.splitext(self.alignmentFile)[1]
-            seqDict = SequenceUtilities.read_fasta_sequences(self.alignmentFile)
+        if os.path.exists(self.options.alignment_file):
+            #self.alignmentFile = alignmentFile
+            self.alignment_ext = os.path.splitext(self.options.alignment_file)[1]
+            seq_dict = SequenceUtilities.read_fasta_sequences(self.options.alignment_file)
             # remove bad characters
             # check for the canonical sequence
             try:
-                seqDict[self.canonSequence]
+                seq_dict[self.options.canon_sequence]
             except KeyError:
-                raise CEPPipelineCanonException(self.canonSequence)
+                raise CEPPipelineCanonException(self.options.canon_sequence)
             else:
-                self.partitionDirectory = os.path.join(self.mainDirectory,'alignments')
+                self.partition_directory = os.path.join(self.options.main_directory,'alignments')
                 # try to make partition directory if not already there
                 try:
-                    os.mkdir(self.partitionDirectory)
+                    os.mkdir(self.partition_directory)
                 except OSError:
                     pass
                 # add number of sequences
-                self.numSequences = len(seqDict)
+                self.num_sequences = len(seq_dict)
                 # check for a stockholm reference sequence
                 try:
-                    seqDict['#=GC RF']
+                    seq_dict['#=GC RF']
                     stockholm = True
                 except KeyError:
                     stockholm = False
                 # try to resample (method should exist, but check again for safety)
                 try:
-                    getattr(self,self.resamplingMethod)(stockholm,seqDict,*kwargs)
+                    getattr(self,self.resampling_method)(stockholm,seq_dict,*kwargs)
                 except AttributeError:
-                    raise CEPPipelineResamplingMethodException(self.resamplingMethod)
+                    raise CEPPipelineResamplingMethodException(self.resampling_method)
         else:
-            raise CEPPipelineAlignmentIOException(alignmentFile)
+            raise CEPPipelineAlignmentIOException(self.options.alignment_file)
 
 
     @log_function_call('Split Half Resampling')
-    def _resample_splithalf(self, stockholm, seqDict, **kwargs):
+    def _resample_splithalf(self, stockholm, seq_dict, **kwargs):
         """Split-half resampling.  Randomly partitions the master alignment into
         non-overlapping pairs of subalignments, nResamples number of times.
         """
-        for i in xrange(1,self.numPartitions+1):
-            halfOne = {}.fromkeys(random.sample(seqDict.keys(),int(len(seqDict)/2)))
-            halfOne[self.canonSequence] = seqDict[self.canonSequence]
-            halfTwo = {}
-            halfTwo[self.canonSequence] = seqDict[self.canonSequence]
-            [halfOne.__setitem__(x,seqDict[x]) for x in halfOne]
-            [halfTwo.__setitem__(x,seqDict[x]) for x in seqDict if x not in halfOne]
+        for i in xrange(1,self.options.num_partitions+1):
+            half_one = {}.fromkeys(random.sample(seq_dict.keys(),int(len(seq_dict)/2)))
+            half_one[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
+            half_two = {}
+            half_two[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
+            [half_one.__setitem__(x,seq_dict[x]) for x in half_one]
+            [half_two.__setitem__(x,seq_dict[x]) for x in seq_dict if x not in half_one]
             if stockholm == True:
-                halfOne['#=GC RF'] = seqDict['#=GC RF']
-                halfTwo['#=GC RF'] = seqDict['#=GC RF']
-            fileNameOne = construct_file_name([self.fileIndicator,self.numSequences,i],'a',self.alignmentExt)
-            seqFileOne = os.path.join(self.partitionDirectory,fileNameOne)
-            fileNameTwo = construct_file_name([self.fileIndicator,self.numSequences,i],'b',self.alignmentExt)
-            seqFileTwo = os.path.join(self.partitionDirectory,fileNameTwo)
-            SequenceUtilities.write_fasta_sequences(halfOne,seqFileOne)
-            SequenceUtilities.write_fasta_sequences(halfTwo,seqFileTwo)
+                half_one['#=GC RF'] = seq_dict['#=GC RF']
+                half_two['#=GC RF'] = seq_dict['#=GC RF']
+            fname_one = construct_file_name([self.options.file_indicator,self.num_sequences,i],'a',self.alignment_ext)
+            seqfile_one = os.path.join(self.partition_directory,fname_one)
+            fname_two = construct_file_name([self.options.file_indicator,self.num_sequences,i],'b',self.alignment_ext)
+            seqfile_two = os.path.join(self.partition_directory,fname_two)
+            SequenceUtilities.write_fasta_sequences(half_one,seqfile_one)
+            SequenceUtilities.write_fasta_sequences(half_two,seqfile_two)
 
 
     @log_function_call('Bootstrap Resampling')
-    def _resample_bootstrap(self, stockholm, seqDict, **kwargs):
+    def _resample_bootstrap(self, stockholm, seq_dict, **kwargs):
         """Bootstrap resampling.  Takes the master alignment of N sequences and produces
         resampled alignments that also contain N sequences (plus the canonical for numbering),
         but in which sequences can appear more than once.
         """
         n = len(seqDict)
-        for iBoot in xrange(1,self.numPartitions+1):
+        for iboot in xrange(1,self.options.num_partitions+1):
             # list of sequence names to pick
-            sk = sample_with_replacement(seqDict.keys(),n)
+            sk = sample_with_replacement(seq_dict.keys(),n)
             # unique-ized list
             usk = [sk[i-1]+'_'+str(i-1) for i in xrange(1,len(sk)+1)]
             # make the dictionary
-            bootSamp = {}
-            for iSeq in xrange(0,len(sk)):
-                bootSamp[usk[iSeq]] = seqDict[sk[iSeq]]
+            boot_samp = {}
+            for iseq in xrange(0,len(sk)):
+                boot_samp[usk[iseq]] = seq_dict[sk[iseq]]
             # append canonical (need unmodified key!)
-            bootSamp[self.canonSequence] = seqDict[self.canonSequence]
+            boot_samp[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
             if stockholm == True:
-                bootSamp['#=GC RF'] = seqDict['#=GC RF']
-            bootFileName = construct_file_name([self.fileIndicator,self.numSequences,iBoot],'boot',self.alignmentExt)
-            bootFile = os.path.join(self.partitionDirectory,bootFileName)
-            SequenceUtilities.write_fasta_sequences(bootSamp,bootFile)
+                boot_samp['#=GC RF'] = seq_dict['#=GC RF']
+            boot_filename = construct_file_name([self.options.file_indicator,self.num_sequences,iboot],'boot',self.alignment_ext)
+            boot_file = os.path.join(self.partition_directory,boot_filename)
+            SequenceUtilities.write_fasta_sequences(boot_samp,boot_file)
 
 
     @log_function_call('Calculating Networks from Partitions')
-    def calculate_networks(self, methodList, subset='*', gap=0.1, pcType='fix', pcMix=0.5, pcLambda=1.0, swtMethod='unweighted',cutoff=0.68):
+    #def calculate_networks(self, method_list, subset='*', gap=0.1, pcType='fix', pcMix=0.5, pcLambda=1.0, swtMethod='unweighted',cutoff=0.68):
+    def calculate_networks(self,method_list,subset='*'):
         """
         Calculates networks using algorithms from CEPAlgorithms.  The methods that are implemented are:
 
@@ -417,48 +414,49 @@ class CEPPipeline(object):
         NOTE: Older algorithms featured in Brown and Brown 2010 ('oldsca', 'omes', 'elsc','mcbasc', and 'random')
         have been deprecated and removed.
         """
-        self.networkExt = '.nwk'
-        methodList = [m.lower() for m in methodList]
+        self.network_ext = '.nwk'
+        method_list = [m.lower() for m in method_list]
         methods = {'mi':'mutualInformation', 'nmi':'NMI', 'znmi':'ZNMI', 'mip':'MIp', 'zres':'Zres', 'sca':'SCA',
              'rpmi':'RPMI', 'fchisq':'FCHISQ','mic':'MIc', 'psicov':'PSICOV','nmfdi':'nmfDI','nmf':'NMF',
              'ridge':'RIDGE','tapdi':'tapDI','smdi':'smDI','ipdi':'ipDI'}
         # check that subset is OK
         if subset in ('a','b','*'):
-            fileNames = construct_file_name([self.fileIndicator,self.numSequences,'*'],subset,self.alignmentExt)
-            alignmentFiles = sorted(glob.glob(os.path.join(self.partitionDirectory,fileNames)))
+            file_names = construct_file_name([self.options.file_indicator,self.num_sequences,'*'],subset,self.alignment_ext)
+            alignment_files = sorted(glob.glob(os.path.join(self.partition_directory,file_names)))
             # make network directory
-            self.networkDirectory = os.path.join(self.mainDirectory,'networks')
+            self.network_directory = os.path.join(self.options.main_directory,'networks')
             try:
-                os.mkdir(self.networkDirectory)
+                os.mkdir(self.network_directory)
             except OSError:
                 pass
             # loop over alignments
-            for alnFile in alignmentFiles:
-                parts = os.path.splitext(os.path.split(alnFile)[1])[0].split('_')
-                print "----------building networks for '%s'----------"%os.path.split(alnFile)[1]
-                msa = CEPAlgorithms.MSAAlgorithms(alnFile,gapFreqCutoff=gap,pcType=pcType,pcMix=pcMix,pcLambda=pcLambda,swtMethod=swtMethod,cutoff=cutoff)
-                for method in methodList:
-                    nwkFile = os.path.join(self.networkDirectory,construct_file_name([parts[0],parts[1],method,parts[2]],'',self.networkExt))
-                    if os.path.exists(nwkFile):
+            for aln_file in alignment_files:
+                parts = os.path.splitext(os.path.split(aln_file)[1])[0].split('_')
+                print "----------building networks for '%s'----------"%os.path.split(aln_file)[1]
+                msa = CEPAlgorithms.MSAAlgorithms(aln_file,gapFreqCutoff=self.options.gap,pcType=self.options.pc_type,pcMix=self.options.pc_mix,
+                    pcLambda=self.options.pc_lambda,swtMethod=self.options.swt_method,cutoff=self.options.cutoff)
+                for method in method_list:
+                    nwk_file = os.path.join(self.network_directory,construct_file_name([parts[0],parts[1],method,parts[2]],'',self.network_ext))
+                    if os.path.exists(nwk_file):
                         print "network for '%s' already exists, skipping . . ."%method
                     else:
                         # map method variable to unbound methods and then call method
-                        methodCall = {'mi':msa.calculate_mutual_information, 'nmi':msa.calculate_NMI, 'znmi':msa.calculate_ZNMI, 'mip':msa.calculate_MIp, \
+                        method_call = {'mi':msa.calculate_mutual_information, 'nmi':msa.calculate_NMI, 'znmi':msa.calculate_ZNMI, 'mip':msa.calculate_MIp, \
                             'zres':msa.calculate_Zres, 'sca':msa.calculate_SCA, 'rpmi':msa.calculate_RPMI, 'fchisq':msa.calculate_FCHISQ,\
                             'mic':msa.calculate_MIc, 'psicov':msa.calculate_PSICOV,'nmfdi':msa.calculate_nmfDI, 'nmf':msa.calculate_NMF, \
                             'ridge':msa.calculate_RIDGE,'tapdi':msa.calculate_tapDI,'smdi':msa.calculate_smDI,'ipdi':msa.calculate_ipDI}
-                        methodCall[method]()
+                        method_call[method]()
                         # check for p-values for writing purposes
                         pvalues = hasattr(msa,'pvalues')
-                        mapped_data = msa.map_to_canonical(msa.__dict__[methods[method]],self.canonSequence)
+                        mapped_data = msa.map_to_canonical(msa.__dict__[methods[method]],self.options.canon_sequence)
                         if pvalues:
-                            significance = msa.map_to_canonical(msa.pvalues,self.canonSequence)
+                            significance = msa.map_to_canonical(msa.pvalues,self.options.canon_sequence)
                         else:
                             # just put dummy p-values of 1.0 in there
                             significance = {}.fromkeys(mapped_data)
                             for k in significance:
                                 significance[k] = 1.0
-                        output = open(nwkFile,'w')
+                        output = open(nwk_file,'w')
                         for ci,cj in mapped_data:
                             output.write("%d\t%d\t%.8f\t%.8f\n"%(ci,cj,mapped_data[(ci,cj)],significance[(ci,cj)]))
         else:
@@ -467,11 +465,11 @@ class CEPPipeline(object):
 
     @log_function_call('Initializing Graphs')
     def initialize_graphs(self):
-        self.graphs = {}.fromkeys(xrange(1,self.numPartitions+1))
-        if self.resamplingMethod == '_resample_splithalf':
+        self.graphs = {}.fromkeys(xrange(1,self.options.num_partitions+1))
+        if self.resampling_method == '_resample_splithalf':
             for k in self.graphs:
                 self.graphs[k] = {'a':None,'b':None}
-        if self.resamplingMethod == '_resample_bootstrap':
+        if self.resampling_method == '_resample_bootstrap':
             for k in self.graphs:
                 self.graphs[k] = {'boot':None}
 
@@ -483,14 +481,11 @@ class CEPPipeline(object):
         Full networks are read in; when graph pruning (to remove poor scores) is
         required, it is done within the accuracy and reproducibility calculations.
         '''
-        #pruning = pruning.lower()
-        #self.pruning = pruning
         self.method = method
-        #pruningMethods = ('mst','topn','bottomn','pvalue')
-        if hasattr(self,'networkDirectory'):
+        if hasattr(self,'network_directory'):
             self.initialize_graphs()
-            file_names = construct_file_name([self.fileIndicator,self.numSequences,self.method],'*',self.networkExt)
-            nwk_files = sorted(glob.glob(os.path.join(self.networkDirectory,file_names)))
+            file_names = construct_file_name([self.options.file_indicator,self.num_sequences,self.method],'*',self.network_ext)
+            nwk_files = sorted(glob.glob(os.path.join(self.network_directory,file_names)))
             for f in nwk_files:
                 # determine split and subset to store the graph
                 i,j = determine_split_subset(deconstruct_file_name(f)[-1])
@@ -499,7 +494,7 @@ class CEPPipeline(object):
             raise CEPPipelineNetworkException
 
 
-
+    # DEPRECATED: CAN REMOVE
     @log_function_call('Calculating Resampling Statistics')
     def calculate_resampling_statistics(self,accMethod='distance',repMethod='splithalf',distMethod='oneminus',simMethod='spearman',rescaled=True,pruning=None,number=None,pdbFile=None, offset=0):
         '''
@@ -559,18 +554,19 @@ class CEPPipeline(object):
             #getattr(self,repFunc)(simMethod)
 
 
-    def _prune_graph(self,partition,p,pruning,number):
+    def _prune_graph(self,partition,p):
         '''
         Prunes a graph according to the input pruning method and number.  Pruning
         modifies the graph in place, so it only needs to be called once.
         '''
         gmethods = {'mst':self.graphs[partition][p].calculate_mst, 'topn':self.graphs[partition][p].calculate_top_n,
             'bottomn':self.graphs[partition][p].calculate_bottom_n,'pvalue':self.graphs[partition][p].calculate_pvalue}
-        gmethods[pruning](number)
+        gmethods[self.options.pruning](self.options.number)
 
 
     @log_function_call('Calculating Accuracy')
-    def calculate_accuracy(self,acc_method,pruning,number,pdb_file):
+    #def calculate_accuracy(self,acc_method,pruning,number,pdb_file):
+    def calculate_accuracy(self):
         '''
         Loops over all the graphs (all graphs, all splits) and computes accuracy
         with the help of the accuracy calculator.  If no accuracy calculator
@@ -578,9 +574,9 @@ class CEPPipeline(object):
         to every graph.
         '''
         try:
-            self.acc_calc = CEPAccuracyCalculator.CEPAccuracyCalculator(pdb_file)
+            self.acc_calc = CEPAccuracyCalculator.CEPAccuracyCalculator(self.options.pdb_file)
         except:
-            raise CEPPipelineStructureIOException(pdb_file)
+            raise CEPPipelineStructureIOException(self.options.pdb_file)
         nR = len(self.graphs)
         nS = len(self.graphs.values()[0])
         for partition in self.graphs:
@@ -592,108 +588,92 @@ class CEPPipeline(object):
                     # arrange edges/weights into a dictionary
                     scores = {}
                     # need to prune the graph if we want to use 'avgdist' or 'contact'
-                    if acc_method in ('avgdist','contact'):
-                            self._prune_graph(partition,p,pruning,number)
+                    if self.options.acc_method in ('avgdist','contact'):
+                            self._prune_graph(partition,p)
                     # assemble the scores
                     for e in self.graphs[partition][p].edges():
                         scores[e] = self.graphs[partition][p].get_edge_data(e[0],e[1])['weight']
                     # pass the scores to the accuracy calculator
-                    acc_avg += self.acc_calc.calculate(scores,acc_method)
+                    acc_avg += self.acc_calc.calculate(scores,self.options.acc_method)
                 # divide by number of graphs in the partition
                 self.statistics['accuracy'][partition] = acc_avg/len(self.graphs[partition])
 
 
 
     @log_function_call('Calculating Reproducibility')
-    def calculate_reproducibility(self,sim_method,pruning,number):
+    def calculate_reproducibility(self):
         self.sim_calc = CEPGraphSimilarity.CEPGraphSimilarity()
-        if self.resamplingMethod == '_resample_splithalf':
-            self._calculate_rep_splithalf(sim_method,pruning,number)
-        elif self.resamplingMethod == '_resample_bootstrap':
-            self._calculate_rep_bootstrap(sim_method,pruning,number)
+        if self.resampling_method == '_resample_splithalf':
+            self._calculate_rep_splithalf()
+        elif self.resampling_method == '_resample_bootstrap':
+            self._calculate_rep_bootstrap()
         else:
             print('ERROR! Cannot calculate reproducibility.')
 
 
     @log_function_call('Calculating Consensus Graph')
-    def calculate_consensus_graph(self,pruning,number):
+    def calculate_consensus_graph(self):
         '''
         The consensus graph's edges are the number of resamples in which that edge
         occured in the pruned set of edges.
         '''
-        self.consensusGraph = CEPNetworks.CEPGraph()
-        if self.resamplingMethod == '_resample_splithalf':
+        self.consensus_graph = CEPNetworks.CEPGraph()
+        if self.resampling_method == '_resample_splithalf':
             norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
             for partition in self.graphs:
-                self._prune_graph(partition,'a',pruning,number)
-                self._prune_graph(partition,'b',pruning,number)
+                self._prune_graph(partition,'a')
+                self._prune_graph(partition,'b')
                 for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
-                    if self.consensusGraph.has_edge(i,j):
-                        self.consensusGraph[i][j]['weight'] += 1/norm
+                    if self.consensus_graph.has_edge(i,j):
+                        self.consensus_graph[i][j]['weight'] += 1/norm
                     else:
-                        self.consensusGraph.add_edge(i,j,weight=1/norm)
-        elif self.resamplingMethod == '_resample_bootstrap':
+                        self.consensus_graph.add_edge(i,j,weight=1/norm)
+        elif self.resampling_method == '_resample_bootstrap':
             nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
             norm = (nG*(nG-1.0))/2.0
             for partition in self.graphs:
-                self._prune_graph(partition,'boot',pruning,number)
+                self._prune_graph(partition,'boot')
                 for i,j in self.graphs[partition]['boot'].edges():
-                    if self.consensusGraph.has_edge(i,j):
-                        self.consensusGraph[i][j]['weight'] += 1/nG
+                    if self.consensus_graph.has_edge(i,j):
+                        self.consensus_graph[i][j]['weight'] += 1/nG
                     else:
-                        self.consensusGraph.add_edge(i,j,weight=1/nG)
+                        self.consensus_graph.add_edge(i,j,weight=1/nG)
         else:
             print('ERROR! Cannot calculate consensus graph.')
 
 
 
     @log_function_call('Calculating Splithalf Reproducibility')
-    def _calculate_rep_splithalf(self,simMethod,pruning,number):
+    def _calculate_rep_splithalf(self):
         '''
         Reproduciblity is the split-to-split similarity of the two graphs; each
         split has a reproducibility value.
         '''
-        #simFunc = '_graph_similarity_'+simMethod
-        #norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
         for partition in self.graphs:
-            self._prune_graph(partition,'a',pruning,number)
-            self._prune_graph(partition,'b',pruning,number)
+            self._prune_graph(partition,'a')
+            self._prune_graph(partition,'b')
             # sub-split similarity
-            self.statistics['reproducibility'][partition] = self.sim_calc.calculate(self.graphs[partition]['a'],self.graphs[partition]['b'],'weight',simMethod)
-            #self.statistics['reproducibility'][partition] = getattr(self,simFunc)(self.graphs[partition]['a'],self.graphs[partition]['b'])
-            # consensus graph
-            #for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
-            #    if self.consensusGraph.has_edge(i,j):
-            #        self.consensusGraph[i][j]['weight'] += 1/norm
-            #    else:
-            #        self.consensusGraph.add_edge(i,j,weight=1/norm)
+            self.statistics['reproducibility'][partition] = self.sim_calc.calculate(self.graphs[partition]['a'],self.graphs[partition]['b'],'weight',self.options.sim_method)
 
 
     @log_function_call('Calculating BICAR Reproducibility')
-    def _calculate_rep_bootstrap(self,simMethod,pruning,number):
+    def _calculate_rep_bootstrap(self):
         '''
         Reproducibility is the average similarity among all unique pairs of
         resampled graphs; there is only a single reproducibility value.
         '''
-        simFunc = '_graph_similarity_'+simMethod
+        sim_func = '_graph_similarity_'+self.options.sim_method
         nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
         norm = (nG*(nG-1.0))/2.0
-        avgSim = 0.0
+        avg_sim = 0.0
         for p1 in self.graphs:
             for p2 in self.graphs:
                 if int(p2) > int(p1):
-                    self._prune_graph(p1,'boot',pruning,number)
-                    self._prune_graph(p2,'boot',pruning,number)
-                    #avgSim += getattr(self,simFunc)(self.graphs[p1]['boot'],g2 = self.graphs[p2]['boot'])
-                    avgSim += self.sim_calc.calculate(self.graphs[p1]['boot'],self.graphs[p2]['boot'],'weight',simMethod)
-            # consensus graph
-            #for i,j in self.graphs[p1]['boot'].edges():
-            #    if self.consensusGraph.has_edge(i,j):
-            #        self.consensusGraph[i][j]['weight'] += 1/nG
-            #    else:
-            #        self.consensusGraph.add_edge(i,j,weight=1/nG)
+                    self._prune_graph(p1,'boot')
+                    self._prune_graph(p2,'boot')
+                    avg_sim += self.sim_calc.calculate(self.graphs[p1]['boot'],self.graphs[p2]['boot'],'weight',sim_method)
         # normalize
-        self.statistics['reproducibility'][0] = avgSim/norm
+        self.statistics['reproducibility'][0] = avg_sim/norm
 
 
 

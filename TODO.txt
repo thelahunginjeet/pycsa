@@ -6,7 +6,7 @@ CEPAlgorithms:
 
 CEPPipeline:
 -options checker at the beginning to look for incompatible options
--wrap parameters into another object for easier specification and passing (config file?)
+-wrap parameters into another object for easier specification and passing (config file?) #done
 -remove mapping to canonical sequence positions from compute_networks; easier to compare multiple canonicals this way
 -make it easier to compute alternate statistics - different acc/rep defs, etc. after having already done the network scoring
 -make restarts easier
@@ -17,46 +17,28 @@ CEPPipeline:
 -have to think about pruning.  need to prune to produce the reproducibility graph, but have to
 NOT prune for any performance-string based accuracies to work.
 
-
-CEPReproduciblityCalculator:
--push all reproducibility calculations into an object like the accuracy calculator; helps to
-streamline CEPPipeline and reduce confusion. #done
--should actually call this CEPGraphSimilarity module #done
+CEPReproducibilityCalculator
+-new reproducibility definitions:
+  + 1.0 - spearman_footrule_distance(split1,split2)
+  + 1.0 - kendall_tau_distance(split1,split2)
+  + Kendall's W for the bootstrap (takes entire set of ranks!)
 
 CEPPlotting:
--utility for nice plot of consensus graphs #done
 -flag for turning legend on and off
 -remove/update deprecated plotting functions
-
-CEPPreprocessing:
 
 CEPStructures:
 -fix up calculate_distances_offset
 
 
-CEPOptions:
--create this
--would allow defaulting of parameters and a much simpler interface
-(roughly 10-12 parameters can take default values)
--pass this around (or pull parameters out of it)
--put in an options checker that gets run after any option is set
--write the options to the database at the end!
-
-
 OVERALL
 -would be nice if it was easy to do single-shot (full aligment calcs) with same interface
   +could calculate accuracy but not reproducibility or consensus graph
--maybe separate calculation of accuracy, reproducibility, and ConsensusGraph into separate calls;
-that way you can do one without the other and helps with pruning
 -add voting as a separate function to the pipeline (different functionality - runs
 list of methods, rank aggregates, etc.)
 -disallowing bootstrap sampling would really clean things up
 -current reproducibility calculations ALWAYS prune the graphs
 -would be *great* longer-term to have reproducibility measures that don't involve any pruning?
 except is there ANY way to get the consensus graph without pruning?
--implement newer accuracy measures (based on ideal performance string) #done
--new reproducibility definitions:
-  + 1.0 - spearman_footrule_distance(split1,split2)
-  + 1.0 - kendall_tau_distance(split1,split2)
-  + Kendall's W for the bootstrap (takes entire set of ranks!)
 -python3 and PEP8 compatibility
+-replace cPickle with pickle

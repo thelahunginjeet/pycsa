@@ -132,7 +132,7 @@ class CEPPlotting(object):
         mainPlot = [left, bottom, width, height]
         accuracyHist = [left, bottom_h, width, 0.2]
         reprodHist = [left_h, bottom, 0.2, height]
-        figure1 = pylab.figure(1, figsize=(8,8))
+        figure1 = pylab.figure(figsize=(8,8))
         axMain = pylab.axes(mainPlot,frameon=False)
         if len(args[0].statistics['reproducibility'].values()) > 1:
             # main plot
@@ -187,7 +187,7 @@ class CEPPlotting(object):
             accVals = cep.statistics['accuracy'].values()
             repVals = cep.statistics['reproducibility'].values()
             scatterAx.plot(accVals,repVals,self.cepColors[cep]+self.cepPoints[cep],mec=self.cepColors[cep],alpha=0.5)
-            labelList.append(cep.fileIndicator+' '+str(cep.numSequences)+' '+cep.method)
+            labelList.append(cep.options.file_indicator+' '+str(cep.num_sequences)+' '+cep.method)
         scatterAx.set_xlim((self.accMin,self.accMax))
         scatterAx.set_ylim((self.repMin,self.repMax))
         scatterAx.get_xaxis().set_visible(False)
@@ -284,11 +284,11 @@ class CEPPlotting(object):
         """
         # figure out which edges to plot
         edges_to_show = []
-        for e in cep.consensusGraph.edges():
-            if cep.consensusGraph.get_edge_data(e[0],e[1])['weight'] > rcut:
+        for e in cep.consensus_graph.edges():
+            if cep.consensus_graph.get_edge_data(e[0],e[1])['weight'] > rcut:
                 edges_to_show.append(e)
         # construct node colors
-        nList = cep.consensusGraph.nodes()
+        nList = cep.consensus_graph.nodes()
         nc = ['k' for x in nList]
         if ncData is not None:
             for i in xrange(0,len(nList)):
@@ -297,10 +297,10 @@ class CEPPlotting(object):
         # now make the plot
         pylab.figure(figsize=(8,8))
         if layout == 'radial':
-            pos = nx.circular_layout(cep.consensusGraph)
+            pos = nx.circular_layout(cep.consensus_graph)
         else:
-            pos = nx.nx_pydot.graphviz_layout(cep.consensusGraph,prog=layout)
-        nx.draw_networkx(cep.consensusGraph,pos=pos,edgelist=edges_to_show,node_color=nc,node_size=25,with_labels=False)
+            pos = nx.nx_pydot.graphviz_layout(cep.consensus_graph,prog=layout)
+        nx.draw_networkx(cep.consensus_graph,pos=pos,edgelist=edges_to_show,node_color=nc,node_size=25,with_labels=False)
         pylab.axis('off')
         if self.figDirectory is None:
             pylab.show()
@@ -336,7 +336,7 @@ class CEPPlotting(object):
             node labels are still readable anywhere.
         """
         # copy the graph and prune it
-        G = copy.deepcopy(cep.consensusGraph)
+        G = copy.deepcopy(cep.consensus_graph)
         G.prune_graph(rcut)
         nList = G.nodes()
         nc = [0.0 for x in nList]
@@ -371,7 +371,7 @@ class CEPPlotting(object):
         cutoffs = numpy.arange(0,1,0.005).tolist()
         for cep in args:
             distances = list()
-            graph = copy.deepcopy(cep.consensusGraph)
+            graph = copy.deepcopy(cep.consensus_graph)
             for cutoff in cutoffs:
                 graph.prune_graph(cutoff)
                 edges = [cep.distances[x] for x in graph.edges()]
@@ -399,7 +399,7 @@ class CEPPlotting(object):
         cutoffs = numpy.arange(0,1,0.005).tolist()
         for cep in args:
             percolation = list()
-            graph = copy.deepcopy(cep.consensusGraph)
+            graph = copy.deepcopy(cep.consensus_graph)
             for cutoff in cutoffs:
                 graph.prune_graph(cutoff)
                 components = map(lambda x: len(x), networkx.connected_components(graph))
