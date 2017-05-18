@@ -43,7 +43,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import sys, os, unittest, random, glob, cPickle, re, itertools, copy, inspect
+import sys, os, unittest, random, glob, cPickle, re, itertools, copy, inspect, glob
 from scipy import mean
 from scipy.stats import pearsonr, spearmanr
 from scipy.linalg import svd
@@ -52,10 +52,25 @@ import Bio.PDB as pdb
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
 from pycsa import CEPAlgorithms,CEPNetworks,CEPAccuracyCalculator,CEPGraphSimilarity
+from pyrankagg import rankagg
 
 
 # decorator function to be used for logging purposes
 log_function_call = LogPipeline.log_function_call
+
+def get_fileset_nums(nwk_dir):
+    '''
+    Gets all the fileset numbers for the network files in nwk_dir; used when
+    trying to produce voted results for ensembles of resamples.
+    '''
+    unique_ind = {}
+    files = glob.glob(nwk_dir+'/*.nwk')
+    for f in files:
+        num_part = f.split('/')[-1].split('.')[0].split('_')[-1]
+        num_part = int(num_part[0:len(num_part)-4])
+        if not unique_ind.has_key(num_part):
+            unique_ind[num_part] = None
+    return unique_ind.keys()
 
 def construct_file_name(pieces, subset, extension):
     """Simple function to create a file name from pieces, then add subset plus file extension"""
@@ -316,7 +331,6 @@ class CEPPipeline(object):
         Some plans may require additional arguments, which are simply passed on
         during the dispatching."""
         if os.path.exists(self.options.alignment_file):
-            #self.alignmentFile = alignmentFile
             self.alignment_ext = os.path.splitext(self.options.alignment_file)[1]
             seq_dict = SequenceUtilities.read_fasta_sequences(self.options.alignment_file)
             # remove bad characters
@@ -535,66 +549,6 @@ class CEPPipeline(object):
             raise CEPPipelineNetworkException
 
 
-    # DEPRECATED: CAN REMOVE
-    @log_function_call('Calculating Resampling Statistics')
-    def calculate_resampling_statistics(self,accMethod='distance',repMethod='splithalf',distMethod='oneminus',simMethod='spearman',rescaled=True,pruning=None,number=None,pdbFile=None, offset=0):
-        '''
-        Calculates the suite of resampling statistics (accuracy, reproducibility, etc.) from the
-        graphs produced from the raw scoring networks.
-
-        For the full details on available accuracy and graph similarity (reproducibility) methods,
-        see CEPAccuracyCalculator and CEPGraph Similarity.
-
-        Resampling scheme dictates reproducibility method.
-            'splithalf' -> 'splithalf' reproducibility
-            'bootstrap' -> 'avgcorr' reproducibility
-
-        Selected accuracy methods (many more are possible; see CEPAccuracyCalculator):
-            Direct use of scores:
-            -avgdist : scaled, edge-weighted physical distance (used in Brown, Brown 2010 paper)
-            -contact : inferior to performance string methods, but included for historical reasons
-
-            Performance strings:
-            -hamming  : hamming distance between ideal and performance strings
-            -whamming : weighted hamming distance
-            -rand     : rand index
-            -bacc     : balanced accuracy
-            -jaccard  : jaccard index
-
-        Selected reproducibility methods:
-        '''
-        # THIS DOES NOT NEED TO BE DONE - REP. METHOD IS DETERMINED BY RESAMPLING METHOD
-        # check for consistent options
-        if self.resamplingMethod == '_resample_splithalf':
-            if repMethod == 'bicar':
-                raise CEPPipelineOptionsConflict(self.resamplingMethod,repMethod)
-        elif repMethod == 'splithalf':
-            raise CEPPipelineOptionsConflict(self.resamplingMethod,repMethod)
-        # check that the graphs exist
-        if not hasattr(self,'graphs'):
-            raise CEPPipelineStatisticsException
-        else:
-            # graphs exist; deal with the case in which no PDB file is available
-            self.acc_calc = None
-            self.sim_calc = CEPGraphSimilarity.CEPGraphSimilarity()
-            if pdbFile is not None:
-                # try to find/read the supplied file
-                try:
-                    self.acc_calc = CEPAccuracyCalculator.CEPAccuracyCalculator(pdbFile)
-                except:
-                    raise CEPPipelineStructureIOException(pdbFile)
-            # carry on with the statistics
-            self.statistics = {'reproducibility':{}, 'accuracy':{}}
-            self.consensusGraph = CEPNetworks.CEPGraph()
-            # accuracy calculation
-            self.calculate_accuracy(accMethod,pruning,number,pdbFile)
-            # reproducibility calculation
-            self.calculate_reproducibility(simMethod,pruning,number)
-            # function distpatch and reproducibility calc.
-            #repFunc = '_calculate_rep_'+repMethod
-            #getattr(self,repFunc)(simMethod)
-
-
     def _prune_graph(self,partition,p):
         '''
         Prunes a graph according to the input pruning method and number.  Pruning
@@ -604,9 +558,101 @@ class CEPPipeline(object):
             'bottomn':self.graphs[partition][p].calculate_bottom_n,'pvalue':self.graphs[partition][p].calculate_pvalue}
         gmethods[self.options.pruning](self.options.number)
 
+    '''
+    @log_function_call('Voting')
+    def calculate_voted_network(self):
+        '''
+        Rank aggregates the results from different scoring methods.  If no PDB file is
+        supplied, a consensus_graph can be calculated but no accuracies for either the
+        individual methods or the voted model can be computed.  Results are written
+        to a special database in the databases directory.
+        '''
+        # check to see if we can calculate accuracies
+        no_acc = True
+        try:
+            self.acc_calc = CEPAccuracyCalculator.CEPAccuracyCalculator(self.options.pdb_file)
+            no_acc = False
+        except:
+            no_acc = True
+        # we can always compute a consensus graph
+        self.consensus_graph = CEPNetworks.CEPGraph()
+        # create the rank aggregator
+        flra = rankagg.FullListRankAggregator()
+        # get all the existing file indices in the networks directory
+        file_nums = get_fileset_nums(self.network_directory)
+        # loop over network files
+        for nwk_indx in file_nums:
+            score_list = []
+            acc_list = []
+            nwk_file_list = glob.glob(self.network_directory+'/'+self.options.file_indicator+'_'+self.num_sequences+'_*_'+str(nwk_indx)+'*.nwk')
+    # weight the votes by accuracy?
+    weight = True
+    # these will store the accuracy results
+    acc_hamming = {'voted':[]}
+    acc_topN = {'voted':[]}
+    # value of N for topN
+    N = 90
+    # this will be the 'ideal' performance vector
+    I = None
+    # get list of contacts (only need to do 1X)
+    pdbFile = 'pdz/pdb/1iu0.pdb'
+    distances = cepstruc.calculate_distances(pdbFile)
+    C = cepstruc.calculate_CASP_contacts(distances)
+    # rank aggregator
+    FLRA = rankagg.FullListRankAggregator()
+    K = len(C)
+    # find all the exiting file indices (this is in case of partial runs)
+    fileNums = get_fileset_nums('pdz/networks')
+    # BIG LOOP OVER NETWORK FILES
+    for nwkIndx in fileNums:
+        print 'Working on nwk files in sample',nwkIndx
+        Slist = []
+        accList = []
+        nwkList = glob.glob('pdz/networks/pdz_800_*_'+str(nwkIndx)+'boot.nwk')
+        for f in nwkList:
+            # read scores into a dictionary and figure out method name
+            method,S = parse_network_file(f)
+            # set up ideal predictor
+            if I is None:
+                I = ''.join(['1' for k in xrange(0,K)]+['0' for k in xrange(0,len(S) - K)])
+            # add keys to data dicts if necessary
+            if not acc_hamming.has_key(method):
+                acc_hamming[method] = []
+            if not acc_topN.has_key(method):
+                acc_topN[method] = []
+            # save the scores for voting
+            Slist.append(S)
+            # produce the performance string, and save for later
+            P = make_perfstring(S,C)
+            # compute accuracies for the individual methods
+            # Hamming
+            acc_hamming[method].append(1 - 1.0*hamming_dist_binary(P,I)/(2*K))
+            # topN
+            acc_topN[method].append(1 - 1.0*hamming_dist_binary(P[:N],I[:N])/N)
+            # THIS IS WHERE WE SAVE THE ACCURACIES FOR WEIGHTING
+            accList.append(1 - 1.0*hamming_dist_binary(P,I)/(2*K))
+        # voting
+        if weight:
+            aggranks = FLRA.aggregate_ranks(Slist,areScores=True,method='borda',weights=[exp(x) for x in accList])
+        else:
+            aggranks = FLRA.aggregate_ranks(Slist,areScores=True,method='borda')
+        # KO is probably prohibitive for this problem
+        # lkoranks = FLRA.locally_kemenize(aggranks,[FLRA.convert_to_ranks(s) for s in Slist])
+        # in order to make the performance vector, we need the highest rank item to be
+        #   the LARGEST score.  (So we send in 1/rank)
+        PV = make_perfstring({k:1.0/v for k,v in aggranks.iteritems()},C)
+        acc_hamming['voted'].append(1 - 1.0*hamming_dist_binary(PV,I)/(2*K))
+        acc_topN['voted'].append(1 - 1.0*hamming_dist_binary(PV[:N],I[:N])/N)
+        # reset I
+        I = None
+    # save scoring dictionaries
+    cPickle.dump(acc_hamming,open('voted_PDZ_hamming_expwt.pydb','wb'),protocol=-1)
+    cPickle.dump(acc_topN,open('voted_PDZ_topN_expwt.pydb','wb'),protocol=-1)
+    #
+    '''
+
 
     @log_function_call('Calculating Accuracy')
-    #def calculate_accuracy(self,acc_method,pruning,number,pdb_file):
     def calculate_accuracy(self):
         '''
         Loops over all the graphs (all graphs, all splits) and computes accuracy
