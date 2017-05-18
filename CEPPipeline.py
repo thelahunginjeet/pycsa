@@ -43,7 +43,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import sys, os, unittest, random, glob, cPickle, re, itertools, copy
+import sys, os, unittest, random, glob, cPickle, re, itertools, copy, inspect
 from scipy import mean
 from scipy.stats import pearsonr, spearmanr
 from scipy.linalg import svd
@@ -178,6 +178,17 @@ class CEPParameters(object):
         for k in kwargs:
             setattr(self,k,kwargs[k])
 
+
+    def __str__(self):
+        '''
+        Pretty-print string representation of the options
+        '''
+        str_rep = 'Correlated Substitutions Pipeline Options:\n'
+        for i in inspect.getmembers(self):
+            if not i[0].startswith('_'):
+                if not inspect.ismethod(i[1]):
+                    str_rep += '\n\t'+i[0]+' : '+str(i[1])
+        return str_rep
 
 
 class CEPPipeline(object):
