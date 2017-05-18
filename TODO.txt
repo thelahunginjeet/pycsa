@@ -32,8 +32,8 @@ CEPStructures:
 
 
 OVERALL
--would be nice if it was easy to do single-shot (full aligment calcs) with same interface
-  +could calculate accuracy but not reproducibility or consensus graph
+-would be nice if it was easy to do single-shot (full aligment calcs) with same interface #done
+  +could calculate accuracy but not reproducibility or consensus graph #done 
 -add voting as a separate function to the pipeline (different functionality - runs
 list of methods, rank aggregates, etc.)
 -disallowing bootstrap sampling would really clean things up

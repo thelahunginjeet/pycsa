@@ -43,7 +43,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import sys, os, unittest, random, glob, cPickle, re, itertools
+import sys, os, unittest, random, glob, cPickle, re, itertools, copy
 from scipy import mean
 from scipy.stats import pearsonr, spearmanr
 from scipy.linalg import svd
@@ -200,14 +200,13 @@ class CEPPipeline(object):
             if not os.path.exists(self.options.main_directory):
                 os.mkdir(self.options.main_directory)
             # establish basic instance variables for a new project
-            #self.mainDirectory = mainDirectory
             self.database_directory = os.path.join(self.options.main_directory,'databases')
             self.network_directory = os.path.join(self.options.main_directory,'networks')
-            #self.options.file_indicator = fileIndicator
-            #self.options.canon_sequence = canonSequence
-            #self.options.num_partitions = numPartitions
             # check for a valid resampling plan
-            self.resampling_method = '_resample_'+self.options.resampling_method
+            if self.options.resampling_method is not None:
+                self.resampling_method = '_resample_'+self.options.resampling_method
+            else:
+                self.resampling_method = '_resample_null'
             if not hasattr(self,self.resampling_method):
                 raise CEPPipelineResamplingMethodException(self.options.resampling_method)
             # initialize the statistics, even if not all are calculated
@@ -244,10 +243,17 @@ class CEPPipeline(object):
 
     @log_function_call('Reading Pipeline Database')
     def read_database(self,db_file):
-        """Reads in a database file with a dictionary keyed by:
+        '''
+        Reads in a database file.  The database is guaranteed to contain:
+         with a dictionary keyed by:
             dict['graph'] = <networkx graph object>
             dict['statistics'] = statistics
-            dict['metadata'] = <instance variables>"""
+            dict['options'] = set of options that produced the database file
+            dict['metadata'] = <instance variables>
+        If a consensus graph was calculated, the database dictionary will also
+        contain:
+            dict['graph'] = <networkx graph object>
+        '''
         # this should set all of the instance variables from the file name
         try:
             db_ptr = open(db_file,'rb')
@@ -255,9 +261,10 @@ class CEPPipeline(object):
             raise CEPPipelineDatabaseIOException(db_file)
         else:
             dictionary = cPickle.load(db_ptr)
-            self.consensus_graph = dictionary['graph']
             self.statistics = dictionary['statistics']
             self.options = dictionary['options']
+            if dictionary.has_key('graph'):
+                self.consensus_graph = dictionary['graph']
             for attribute in dictionary['metadata']:
                 self.__dict__[attribute] = dictionary['metadata'][attribute]
             db_ptr.close()
@@ -265,11 +272,15 @@ class CEPPipeline(object):
 
     @log_function_call('Writing Pipeline Database')
     def write_database(self):
-        """Writes a database file with a dictionary keyed by:
-            dict['graph'] = <networkx graph object>
+        '''
+        Writes a database file with a dictionary keyed by:
             dict['statistics'] = statistics
             dict['options'] = set of options that produced the database file
-            dict['metadata'] = <instance variables>"""
+            dict['metadata'] = <instance variables>
+        If the consensus graph has been calculated, the database dictionary will
+        also have:
+            dict['graph'] = <networkx graph object>
+        '''
         # write to the default database directory ./database
         if os.path.exists(self.database_directory):
             pass
@@ -278,7 +289,9 @@ class CEPPipeline(object):
         db_file = construct_file_name([self.options.file_indicator,self.num_sequences,self.method], '', '.pydb')
         db_file = os.path.join(self.database_directory,db_file)
         db_ptr = open(db_file,'wb')
-        dictionary = {'graph':self.consensus_graph,'statistics':self.statistics, 'options':self.options, 'metadata':{}}
+        dictionary = {'statistics':self.statistics, 'options':self.options, 'metadata':{}}
+        if hasattr(self,'consensus_graph'):
+            dictionary['graph'] = self.consensus_graph
         for attribute in self.__dict__:
             dictionary['metadata'][attribute] = self.__dict__[attribute]
         cPickle.dump(dictionary,db_ptr,-1)
@@ -323,6 +336,22 @@ class CEPPipeline(object):
                     raise CEPPipelineResamplingMethodException(self.resampling_method)
         else:
             raise CEPPipelineAlignmentIOException(self.options.alignment_file)
+
+
+    @log_function_call('No Resampling')
+    def _resample_null(self, stockholm, seq_dict, **kwargs):
+        '''
+        No resampling; simply writes the full alignment to the alignments directory.
+        Used to allow single-shot (full alignment) calculations.  If this is the
+        plan chosen, you CANNOT calculate either reproducibility or a consensus
+        graph.
+        '''
+        fname = construct_file_name([self.options.file_indicator,self.num_sequences,1],'full',self.alignment_ext)
+        seqfile = os.path.join(self.partition_directory,fname)
+        full_seq = copy.deepcopy(seq_dict)
+        if stockholm == True:
+            full_seq['#=GC RF'] = seq_dict['#=GC RF']
+        SequenceUtilities.write_fasta_sequences(full_seq,seqfile)
 
 
     @log_function_call('Split Half Resampling')
@@ -374,7 +403,6 @@ class CEPPipeline(object):
 
 
     @log_function_call('Calculating Networks from Partitions')
-    #def calculate_networks(self, method_list, subset='*', gap=0.1, pcType='fix', pcMix=0.5, pcLambda=1.0, swtMethod='unweighted',cutoff=0.68):
     def calculate_networks(self,method_list,subset='*'):
         """
         Calculates networks using algorithms from CEPAlgorithms.  The methods that are implemented are:
@@ -472,6 +500,8 @@ class CEPPipeline(object):
         if self.resampling_method == '_resample_bootstrap':
             for k in self.graphs:
                 self.graphs[k] = {'boot':None}
+        if self.resampling_method == '_resample_null':
+            self.graphs = {1:{'full':None}}
 
 
     @log_function_call('Reading Graphs from Network Files')
