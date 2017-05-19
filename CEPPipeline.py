@@ -49,6 +49,7 @@ from scipy.stats import pearsonr, spearmanr
 from scipy.linalg import svd
 import numpy as np
 import Bio.PDB as pdb
+from networkx import Graph
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
 from pycsa import CEPAlgorithms,CEPNetworks,CEPAccuracyCalculator,CEPGraphSimilarity
@@ -66,24 +67,49 @@ def get_fileset_nums(nwk_dir):
     unique_ind = {}
     files = glob.glob(nwk_dir+'/*.nwk')
     for f in files:
-        num_part = f.split('/')[-1].split('.')[0].split('_')[-1]
-        num_part = int(num_part[0:len(num_part)-4])
+        num_part = f.split('/')[-1].split('.')[0].split('_')[-2]
+        num_part = int(num_part)
         if not unique_ind.has_key(num_part):
             unique_ind[num_part] = None
     return unique_ind.keys()
 
-def construct_file_name(pieces, subset, extension):
+def construct_file_name(pieces, extension):
     """Simple function to create a file name from pieces, then add subset plus file extension"""
-    return reduce(lambda x,y: str(x)+'_'+str(y),pieces) + subset + extension
+    return reduce(lambda x,y: str(x)+'_'+str(y),pieces) + extension
 
 def deconstruct_file_name(name):
     """Simple function to break apart a file name into individual pieces without the extension"""
     return os.path.splitext(os.path.split(name)[1])[0].split('_')
 
 def determine_split_subset(name):
-    """Simple function to return the split (integer) and the subset ('a' or 'b')"""
-    tmp = re.findall('\d+',name)[0]
-    return int(tmp),name.replace(tmp,'')
+    '''
+    Simple function that breaks up a pipeline file and returns the split (integet) and the
+    subset ('a','b','boot','full',etc.)
+    '''
+    pieces = deconstruct_file_name(name)
+    return int(pieces[-2]),pieces[-1]
+
+
+def parse_network_file(nwk_file):
+    '''
+    Reads a network file with lines of the form:
+        ri(<int>) rj(<int>) score(<float>) pvalue(<float>)
+    and returns a dictionary of (ri,rj):score.
+    The bootstrap .nwk file names are of the form:
+        protein_Nres_method_nboot.nwk
+    from which we extract the method name.
+    '''
+    scores = {}
+    with open(nwk_file,'r') as f:
+        lines = f.readlines()
+    f.close()
+    for l in lines:
+        clean_line = ' '.join(l.strip().split())
+        atoms = clean_line.split()
+        scores[(int(atoms[0]),int(atoms[1]))] = float(atoms[2])
+    method = nwk_file.split('_')[2]
+    return method,scores
+
 
 def sample_with_replacement(pop,k):
     """Returns a list of k samples from input population, sampling with replacement"""
@@ -312,7 +338,7 @@ class CEPPipeline(object):
             pass
         else:
             os.mkdir(self.database_directory)
-        db_file = construct_file_name([self.options.file_indicator,self.num_sequences,self.method], '', '.pydb')
+        db_file = construct_file_name([self.options.file_indicator,self.num_sequences,self.method],'.pydb')
         db_file = os.path.join(self.database_directory,db_file)
         db_ptr = open(db_file,'wb')
         dictionary = {'statistics':self.statistics, 'options':self.options, 'metadata':{}}
@@ -371,7 +397,7 @@ class CEPPipeline(object):
         plan chosen, you CANNOT calculate either reproducibility or a consensus
         graph.
         '''
-        fname = construct_file_name([self.options.file_indicator,self.num_sequences,1],'full',self.alignment_ext)
+        fname = construct_file_name([self.options.file_indicator,self.num_sequences,1,'full'],self.alignment_ext)
         seqfile = os.path.join(self.partition_directory,fname)
         full_seq = copy.deepcopy(seq_dict)
         if stockholm == True:
@@ -394,9 +420,9 @@ class CEPPipeline(object):
             if stockholm == True:
                 half_one['#=GC RF'] = seq_dict['#=GC RF']
                 half_two['#=GC RF'] = seq_dict['#=GC RF']
-            fname_one = construct_file_name([self.options.file_indicator,self.num_sequences,i],'a',self.alignment_ext)
+            fname_one = construct_file_name([self.options.file_indicator,self.num_sequences,i,'a'],self.alignment_ext)
             seqfile_one = os.path.join(self.partition_directory,fname_one)
-            fname_two = construct_file_name([self.options.file_indicator,self.num_sequences,i],'b',self.alignment_ext)
+            fname_two = construct_file_name([self.options.file_indicator,self.num_sequences,i,'b'],self.alignment_ext)
             seqfile_two = os.path.join(self.partition_directory,fname_two)
             SequenceUtilities.write_fasta_sequences(half_one,seqfile_one)
             SequenceUtilities.write_fasta_sequences(half_two,seqfile_two)
@@ -422,7 +448,7 @@ class CEPPipeline(object):
             boot_samp[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
             if stockholm == True:
                 boot_samp['#=GC RF'] = seq_dict['#=GC RF']
-            boot_filename = construct_file_name([self.options.file_indicator,self.num_sequences,iboot],'boot',self.alignment_ext)
+            boot_filename = construct_file_name([self.options.file_indicator,self.num_sequences,iboot,'boot'],self.alignment_ext)
             boot_file = os.path.join(self.partition_directory,boot_filename)
             SequenceUtilities.write_fasta_sequences(boot_samp,boot_file)
 
@@ -474,7 +500,7 @@ class CEPPipeline(object):
              'ridge':'RIDGE','tapdi':'tapDI','smdi':'smDI','ipdi':'ipDI'}
         # check that subset is OK
         if subset in ('a','b','*'):
-            file_names = construct_file_name([self.options.file_indicator,self.num_sequences,'*'],subset,self.alignment_ext)
+            file_names = construct_file_name([self.options.file_indicator,self.num_sequences,'*',subset],self.alignment_ext)
             alignment_files = sorted(glob.glob(os.path.join(self.partition_directory,file_names)))
             # make network directory
             self.network_directory = os.path.join(self.options.main_directory,'networks')
@@ -484,12 +510,13 @@ class CEPPipeline(object):
                 pass
             # loop over alignments
             for aln_file in alignment_files:
-                parts = os.path.splitext(os.path.split(aln_file)[1])[0].split('_')
-                print "----------building networks for '%s'----------"%os.path.split(aln_file)[1]
+                #parts = os.path.splitext(os.path.split(aln_file)[1])[0].split('_')
+                parts = deconstruct_file_name(aln_file)
+                print "----------building networks for '%s'----------" % os.path.split(aln_file)[1]
                 msa = CEPAlgorithms.MSAAlgorithms(aln_file,gapFreqCutoff=self.options.gap,pcType=self.options.pc_type,pcMix=self.options.pc_mix,
                     pcLambda=self.options.pc_lambda,swtMethod=self.options.swt_method,cutoff=self.options.cutoff)
                 for method in method_list:
-                    nwk_file = os.path.join(self.network_directory,construct_file_name([parts[0],parts[1],method,parts[2]],'',self.network_ext))
+                    nwk_file = os.path.join(self.network_directory,construct_file_name([parts[0],parts[1],method,parts[2],parts[3]],self.network_ext))
                     if os.path.exists(nwk_file):
                         print "network for '%s' already exists, skipping . . ."%method
                     else:
@@ -539,11 +566,11 @@ class CEPPipeline(object):
         self.method = method
         if hasattr(self,'network_directory'):
             self.initialize_graphs()
-            file_names = construct_file_name([self.options.file_indicator,self.num_sequences,self.method],'*',self.network_ext)
+            file_names = construct_file_name([self.options.file_indicator,self.num_sequences,self.method,'*'],self.network_ext)
             nwk_files = sorted(glob.glob(os.path.join(self.network_directory,file_names)))
             for f in nwk_files:
                 # determine split and subset to store the graph
-                i,j = determine_split_subset(deconstruct_file_name(f)[-1])
+                i,j = determine_split_subset(f)
                 self.graphs[i][j] = CEPNetworks.CEPGraph(f)
         else:
             raise CEPPipelineNetworkException
@@ -558,7 +585,7 @@ class CEPPipeline(object):
             'bottomn':self.graphs[partition][p].calculate_bottom_n,'pvalue':self.graphs[partition][p].calculate_pvalue}
         gmethods[self.options.pruning](self.options.number)
 
-    '''
+
     @log_function_call('Voting')
     def calculate_voted_network(self):
         '''
@@ -566,7 +593,14 @@ class CEPPipeline(object):
         supplied, a consensus_graph can be calculated but no accuracies for either the
         individual methods or the voted model can be computed.  Results are written
         to a special database in the databases directory.
+
+        The consensus graph(s) for voting are constructed differently from the non-voted
+        case.  In this case, for each set of methods calculated on a particular alignment,
+        the self.options.number of top ranked edges are added to the graph, for each method.
+        The weight of the edge = number of methods which placed that pair in its set of
+        top-ranking edges.
         '''
+        acc = {'voted':[],'graphs':[]}
         # check to see if we can calculate accuracies
         no_acc = True
         try:
@@ -583,8 +617,49 @@ class CEPPipeline(object):
         # loop over network files
         for nwk_indx in file_nums:
             score_list = []
-            acc_list = []
-            nwk_file_list = glob.glob(self.network_directory+'/'+self.options.file_indicator+'_'+self.num_sequences+'_*_'+str(nwk_indx)+'*.nwk')
+            file_wc = construct_file_name([self.options.file_indicator,self.num_sequences,'*',nwk_indx,'*'],self.network_ext)
+            nwk_file_list = sorted(glob.glob(os.path.join(self.network_directory,file_wc)))
+            # allocate the consensus graph for the set of methods
+            con_graph = Graph()
+            for f in nwk_file_list:
+                # read the scores into a dictionary and figure out the method name
+                method,scores = parse_network_file(f)
+                # add key to the acc dict if necessary
+                if not acc.has_key(method):
+                    acc[method] = []
+                # save the scores for rank aggregation
+                score_list.append(scores)
+                # compute method accuracy, if the accuracy calculator exists
+                #    (otherwise just put None there)
+                if no_acc:
+                    acc[method].append(None)
+                else:
+                    acc[method].append(self.acc_calc.calculate(scores,self.options.acc_method))
+                # add/update edges to the consensus graph
+                for (i,j),rank in flra.convert_to_ranks(scores).iteritems():
+                    if rank <= self.options.number:
+                        if con_graph.has_edge(i,j):
+                            # increment
+                            con_graph.edge[i][j]['weight'] += 1
+                        else:
+                            # add
+                            con_graph.add_edge(i,j,weight=1)
+            # graph for this set has been created, add to the list
+            acc['graphs'].append(con_graph)
+            # now do the voting
+            agg_ranks = flra.aggregate_ranks(score_list,areScores=True,method='borda')
+            # in order to make the performance vector for the voted ranks, we need the highest
+            #   rank item to be the LARGEST score, so create a fake set of scores = 1/rank
+            voted_scores = {k:1.0/v for k,v in agg_ranks.iteritems()}
+            if no_acc:
+                acc['voted'].append(None)
+            else:
+                acc['voted'].append(self.acc_calc.calculate(voted_scores,self.options.acc_method))
+        # now dump the results
+        db_file = os.path.join(self.database_directory,construct_file_name([self.options.file_indicator,self.num_sequences,'voted'],'.pydb'))
+        cPickle.dump(acc,open(db_file,'wb'),protocol=-1)
+
+    """
     # weight the votes by accuracy?
     weight = True
     # these will store the accuracy results
@@ -649,8 +724,7 @@ class CEPPipeline(object):
     cPickle.dump(acc_hamming,open('voted_PDZ_hamming_expwt.pydb','wb'),protocol=-1)
     cPickle.dump(acc_topN,open('voted_PDZ_topN_expwt.pydb','wb'),protocol=-1)
     #
-    '''
-
+    """
 
     @log_function_call('Calculating Accuracy')
     def calculate_accuracy(self):

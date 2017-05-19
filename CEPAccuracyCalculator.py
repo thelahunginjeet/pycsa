@@ -244,8 +244,8 @@ class CEPAccuracyCalculator(object):
             # these need the confusion matrix between Ps and PI as well, and the
             #   functions are members of ConfusionMatrix
             Ps,PI = self.make_performance_strings(scores)
-            self.confmatrix = ConfusionMatrix(predicted=Ps,actual=PI)
-            acc = getattr(self.confusion_matrix,'acc_'+method)()
+            self.confusion_matrix = ConfusionMatrix(predicted=Ps,actual=PI)
+            acc = getattr(self.confusion_matrix,method)()
         elif method in ('avgdist','contact'):
             # these need neither; they are kept for historical reasons
             acc = getattr(self,'acc_'+method)(scores)
