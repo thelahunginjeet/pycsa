@@ -600,7 +600,7 @@ class CEPPipeline(object):
         The weight of the edge = number of methods which placed that pair in its set of
         top-ranking edges.
         '''
-        acc = {'voted':[],'graphs':[]}
+        self.statistics = {'accuracy':{'voted':[]}}
         # check to see if we can calculate accuracies
         no_acc = True
         try:
@@ -608,8 +608,8 @@ class CEPPipeline(object):
             no_acc = False
         except:
             no_acc = True
-        # we can always compute a consensus graph
-        self.consensus_graph = CEPNetworks.CEPGraph()
+        # there may be many consensus graphs
+        self.consensus_graph = []
         # create the rank aggregator
         flra = rankagg.FullListRankAggregator()
         # get all the existing file indices in the networks directory
@@ -619,45 +619,38 @@ class CEPPipeline(object):
             score_list = []
             file_wc = construct_file_name([self.options.file_indicator,self.num_sequences,'*',nwk_indx,'*'],self.network_ext)
             nwk_file_list = sorted(glob.glob(os.path.join(self.network_directory,file_wc)))
-            # allocate the consensus graph for the set of methods
-            con_graph = Graph()
             for f in nwk_file_list:
                 # read the scores into a dictionary and figure out the method name
                 method,scores = parse_network_file(f)
                 # add key to the acc dict if necessary
-                if not acc.has_key(method):
-                    acc[method] = []
+                if not self.statistics['accuracy'].has_key(method):
+                    self.statistics['accuracy'][method] = []
                 # save the scores for rank aggregation
                 score_list.append(scores)
                 # compute method accuracy, if the accuracy calculator exists
                 #    (otherwise just put None there)
                 if no_acc:
-                    acc[method].append(None)
+                    self.statistics['accuracy'][method].append(None)
                 else:
-                    acc[method].append(self.acc_calc.calculate(scores,self.options.acc_method))
-                # add/update edges to the consensus graph
-                for (i,j),rank in flra.convert_to_ranks(scores).iteritems():
-                    if rank <= self.options.number:
-                        if con_graph.has_edge(i,j):
-                            # increment
-                            con_graph.edge[i][j]['weight'] += 1
-                        else:
-                            # add
-                            con_graph.add_edge(i,j,weight=1)
-            # graph for this set has been created, add to the list
-            acc['graphs'].append(con_graph)
+                    self.statistics['accuracy'][method].append(self.acc_calc.calculate(scores,self.options.acc_method))
             # now do the voting
             agg_ranks = flra.aggregate_ranks(score_list,areScores=True,method='borda')
             # in order to make the performance vector for the voted ranks, we need the highest
-            #   rank item to be the LARGEST score, so create a fake set of scores = 1/rank
+            #   rank item to be the LARGEST score, so create a fake set of scores = 1/rank; we
+            #   also use these scores for edge weights in the voted network
             voted_scores = {k:1.0/v for k,v in agg_ranks.iteritems()}
             if no_acc:
-                acc['voted'].append(None)
+                self.statistics['accuracy']['voted'].append(None)
             else:
-                acc['voted'].append(self.acc_calc.calculate(voted_scores,self.options.acc_method))
+                self.statistics['accuracy']['voted'].append(self.acc_calc.calculate(voted_scores,self.options.acc_method))
+            # form the consensus graph for this set of alignments
+            con_graph = CEPNetworks.CEPGraph()
+            for (i,j),s in voted_scores.iteritems():
+                con_graph.add_edge(i,j,weight=s)
+            self.consensus_graph.append(con_graph)
         # now dump the results
-        db_file = os.path.join(self.database_directory,construct_file_name([self.options.file_indicator,self.num_sequences,'voted'],'.pydb'))
-        cPickle.dump(acc,open(db_file,'wb'),protocol=-1)
+        self.method = 'voted'
+        self.write_database()
 
     """
     # weight the votes by accuracy?

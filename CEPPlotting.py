@@ -335,8 +335,13 @@ class CEPPlotting(object):
             colormap for node display; 'RdYlGn' is the default in the hopes that
             node labels are still readable anywhere.
         """
-        # copy the graph and prune it
-        G = copy.deepcopy(cep.consensus_graph)
+        # if the consensus graph was produced from voting, consensus_graph will be
+        #   a list - so just plot the 0th elements
+        if type(cep.consensus_graph) is list:
+            G = copy.deepcopy(cep.consensus_graph[0])
+        else:
+            G = copy.deepcopy(cep.consensus_graph)
+        # prune the graph 
         G.prune_graph(rcut)
         nList = G.nodes()
         nc = [0.0 for x in nList]
