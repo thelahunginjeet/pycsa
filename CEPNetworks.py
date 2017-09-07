@@ -49,19 +49,27 @@ class CEPGraph(nxGraph):
 	"""This is the main graph class (subclassed from networkx.Graph) for computing statistics on networks
 	Note: all of the functions below assume a weighted graph (setup in __init__)"""
 	def __init__(self,nwkFile=None):
-		"""Initialize with a network file from the pipeline"""
-		try:
-			# initialize the networkx.Graph class first
+		'''
+		If nwkFile is None, an empty graph is created.  If nwkFile is supplied but not
+		found, an error is thrown.
+		'''
+		if nwkFile is None:
+			# just make an empty graph
 			super(CEPGraph,self).__init__()
-			self.read_network(nwkFile)
-			if self.is_weighted():
-				self.weighted = True
-			else:
-				raise CEPGraphWeightException
-		except IOError:
-			raise CEPGraphIOException(nwkFile)
-		except TypeError:
-			super(CEPGraph,self).__init__()
+			self.weighted = True
+		else:
+			try:
+				# initialize the networkx.Graph class first
+				super(CEPGraph,self).__init__()
+				self.read_network(nwkFile)
+				if self.is_weighted():
+					self.weighted = True
+				else:
+					raise CEPGraphWeightException
+			except IOError:
+				raise CEPGraphIOException(nwkFile)
+			except TypeError:
+				super(CEPGraph,self).__init__()
 
 	def is_weighted(self):
 		edges = {'weight':False}
@@ -153,16 +161,6 @@ class CEPGraph(nxGraph):
 			else:
 				self.remove_edge(v1,v2)
 
-	def compute_jaccard_index(self,graph):
-		"""Computes the Jaccard index for edges between self and another graph.
-		note: Jaccard index = edge intersection divided by edge union"""
-		union = frozenset(self.edges()).union(graph.edges())
-		intersection = frozenset(self.edges()).intersection(graph.edges())
-		try:
-			jaccard = float(len(intersection))/len(union)
-		except ZeroDivisionError:
-			jaccard = 0.0
-		return jaccard
 
 class CEPGraphIOException(IOError):
 	@log_function_call('ERROR : Network File Input')
