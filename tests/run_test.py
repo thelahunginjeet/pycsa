@@ -2,108 +2,97 @@
 run_pipeline.py
 
 Created by CA Brown and KS Brown.  For reference see:
-Brown, C.A., Brown, K.S. 2010. Validation of coevolving residue algorithms via 
-pipeline sensitivity analysis: ELSC and OMES and ZNMI, oh my! PLoS One, e10779. 
+Brown, C.A., Brown, K.S. 2010. Validation of coevolving residue algorithms via
+pipeline sensitivity analysis: ELSC and OMES and ZNMI, oh my! PLoS One, e10779.
 doi:10.1371/journal.pone.0010779
 
-This is the main test script for the pipeline.  All of the files that are needed 
-are included in the '../tests' directory.  The datasets is small enough (subset of the PDZ 
+This is the main test script for the pipeline.  All of the files that are needed
+are included in the '../tests' directory.  The datasets is small enough (subset of the PDZ
 dataset from our publication) to run a small number of resamplings in a short amount of time.
+
+The suggested way to run this is to install pycsa via:
+
+pip install pycsa/ --upgrade
+
+then copy the test directory to another location on your system, and run the
+test script using
+
+python run_test.py
+
+This version calculates resampling statistics and produces a scatterplot of
+the accuracy/reproducibility results.
 """
 
 from pycsa import CEPPipeline,CEPPlotting,CEPLogging
 import sys,os
 
-# parameters/meta-parameters
-# directory-related
-mainDirectory = './pdztest/'            # base project directory
-alignmentFile = 'pdz_test.aln'          # master alignment file
-pdbFile = '1iu0.pdb'                    # structure for accuracy calculation
-figDirectory = 'figures/'     # locations for plots
-# file-related
-fileIndicator = 'pdz'                   # prefix for network/graph files
-canonSequence = '1IU0'                  # FASTA identifier for canonical sequence
-# resampling
-resamplingMethod = 'splithalf'          # sets resampling ensemble
-numPartitions = 10                      # size of resampling ensemble
-repMethod = 'splithalf'                 # method for computing reproducibility
-simMethod = 'spearman'                  # method for computing pairwise/groupwise graph similarity
-# symbol counting
-pcType = 'inc'                          # pseudocounting type
-pcLambda = 1.0                          # number of scalar pseudocounts (for pcType='fix')
-pcMix = 0.5                             # mixture parameter (for pcType = 'inc')
-gap = 0.1                               # columns with %(gaps) > gap will not be scored
-swtMethod = 'unweighted'                # method for downweighting similar sequences
-cutoff = 0.68                           # groups of sequences with fractional_similarity > cutoff share unit weight
-# method-related
-pruning = 'mst'                         # graph pruning method
-number = 90                             # number of edges to keep (ignored for pruning = 'mst')
-# accuracy
-accMethod = 'distance'                  # metric for accuracy
-distMethod = 'oneminus'                 # definition of distance (for accMethod = 'distance')
-rescaled = True                         # rescale distances so accuracy is in [0,1]
 
-def run_pipelines(methodList):
+def run_pipelines(method_list,options):
     # create logfile
     #   note: if the logfile already exists, new time-stamped logging statements will be appended to this file
     logger = CEPLogging.LogPipeline('./pdzlog.txt')
 
-    # run pipeline using parameters above
-    #   'mainDirectory' => base project directory; directories/files are created here
-    #   'fileIndicator' => prefix for the network and alignment files
-    #   'canonSequence' => case-sensitive string of the FASTA header (or STO sequence identifier) for the canonical sequence used for position numbering
-    #   'numPartitions' => number of resamples
-    #   'resamplingMethod' => type of resampling (splithalf, bootstrap)
-    pipe = CEPPipeline.CEPPipeline(mainDirectory=mainDirectory,fileIndicator=fileIndicator,canonSequence=canonSequence,
-                                numPartitions=numPartitions,resamplingMethod=resamplingMethod)
-    
+    # create a new pipeline using input options
+    pipe = CEPPipeline.CEPPipeline(options=options)
+
     # issue this command to clean the network and alignment directories
-    #   note: the pipeline won't overwrite network & alignment files (to avoid unnecessary recalculation) so you have to issue 
+    #   note: the pipeline won't overwrite network & alignment files (to avoid unnecessary recalculation) so you have to issue
     #          clean project or manually by delete the files
     pipe.clean_project()
 
     # first, make subalignments by resampling
-    #   'alignmentFile' => path name of the master alignment file to be resampled
-    #   note: this will create a directory in the 'mainDirectory' named 'alignments'
-    pipe.resample_alignment(alignmentFile=alignmentFile)
+    #   note: this will create a directory in main_directory/ named 'alignments'
+    pipe.resample_alignment()
 
-    # calculate the network; pl is the pseudocounting admixture parameter
-    #   note: this creates a directory in the 'mainDirectory' named 'networks'
-    pipe.calculate_networks(methodList=methodList,pcLambda=pcLambda,gap=gap,pcType=pcType,swtMethod=swtMethod,cutoff=cutoff)
-    
+    # calculate the networks using the specified methods
+    #   note: this creates a directory in the main_directory/ named 'networks'
+    pipe.calculate_networks(method_list=method_list)
+
     # calculate graphs, resampling stats, and write a results database for each method
-    #   'pruning' => method by which to prune the dense networks of pair scores (e.g. mst, topn, bottomn)
-    #   'pdbFile' => path name of pdb file to be used for accuracy statistics
-    #   'distMethod' => transformation of weighted distance
-    #   'repMethod' => type of reproducibility (bicar, splithalf) to calculate
-    #   'simMethod' => way to measure graph similarity for reproducibility measures which compare graphs; will be ignored
-    #                    if a reproducibility measure that does not use this information is chosen.
-    for m in methodList:
-        pipe.calculate_graphs(method=m,pruning=pruning,number=number)
-        pipe.calculate_resampling_statistics(accMethod=accMethod,repMethod=repMethod,distMethod=distMethod,rescaled=rescaled,
-                                            simMethod=simMethod,pdbFile=pdbFile)
+    #   note: the database also contains a copy of the options structure used for the calculations
+    for m in method_list:
+        pipe.read_graphs(method=m)
+        # these are independent; any one can be called without calling the other two
+        pipe.calculate_accuracy()
+        pipe.calculate_reproducibility()
+        pipe.calculate_consensus_graph()
+        # write the result
+        #   note: this creates a directory in the main_directory/ named 'databases'
         pipe.write_database()
-
     return
 
 
-def plot_pipelines(methodList):
+def plot_pipelines(method_list,main_directory,options):
     # read in the databases written by run_pipeline
-    ceps = {}.fromkeys(methodList)
-    for meth in methodList:
-        dbFile = mainDirectory+'databases/pdz_800_'+meth+'_'+pruning+'.pydb'
-        ceps[meth] = CEPPipeline.CEPPipeline(database=dbFile)
-    plot = CEPPlotting.CEPPlotting(figDirectory=mainDirectory+figDirectory)
-    #plot.plot_accuracy_reproducibility(ceps['znmi'],ceps['invcov'],ceps['psicov'],ceps['mfdi'])
+    plot = CEPPlotting.CEPPlotting(figDirectory=main_directory+options.fig_directory)
+    plot.set_axis_limits(accLimits=(0,1),repLimits=(-1,1))
+    ceps = {}.fromkeys(method_list)
+    for meth in method_list:
+        db_file = main_directory+'databases/pdz_800_'+meth+'.pydb'
+        # just pass None to options, as they will be read from the database file
+        ceps[meth] = CEPPipeline.CEPPipeline(options=None,database=db_file)
+        plot.net_plot(ceps[meth],0.75)
     plot.plot_accuracy_reproducibility(*ceps.values())
 
 
+
 if __name__ == '__main__':
-    # list of methods
-    methodList = ['mi','mip','fchisq']
+    # absolutely required to do a run
+    main_directory = './'                                  # base project directory
+    alignment_file = 'pdz_test.aln'                        # master alignment file
+    canon_sequence = '1IU0'
+
+    # create the options structure; most parameters have default values
+    options = CEPPipeline.CEPParameters(main_directory,alignment_file,canon_sequence)
+
+    # modify some of the options (see CEPPipeline for a full list of options and their defaults)
+    options.set_parameters(pdb_file='1iu0.pdb',num_partitions=10,file_indicator='pdz',resampling_method='splithalf',acc_method='bacc')
+
+    # list of methods (see CEPAlgorithms for the full list of methods)
+    method_list = ['mi','zres','mip']
 
     # run
-    run_pipelines(methodList)
+    run_pipelines(method_list,options)
 
     # plot results
-    plot_pipelines(methodList)
+    plot_pipelines(method_list,main_directory,options)

@@ -6,7 +6,6 @@ CEPAlgorithms:
 
 CEPPipeline:
 -options checker at the beginning to look for incompatible options
--wrap parameters into another object for easier specification and passing (config file?) #done
 -remove mapping to canonical sequence positions from compute_networks; easier to compare multiple canonicals this way
 -make it easier to compute alternate statistics - different acc/rep defs, etc. after having already done the network scoring
 -make restarts easier
@@ -32,8 +31,6 @@ CEPStructures:
 
 
 OVERALL
--would be nice if it was easy to do single-shot (full aligment calcs) with same interface #done
-  +could calculate accuracy but not reproducibility or consensus graph #done 
 -add voting as a separate function to the pipeline (different functionality - runs
 list of methods, rank aggregates, etc.)
 -disallowing bootstrap sampling would really clean things up
@@ -42,3 +39,9 @@ list of methods, rank aggregates, etc.)
 except is there ANY way to get the consensus graph without pruning?
 -python3 and PEP8 compatibility
 -replace cPickle with pickle
+
+
+DONE
+-wrap parameters into another object for easier specification and passing (config file?) #done
+-would be nice if it was easy to do single-shot (full aligment calcs) with same interface #done
+  +could calculate accuracy but not reproducibility or consensus graph #done
