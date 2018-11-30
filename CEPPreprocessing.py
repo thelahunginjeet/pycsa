@@ -5,10 +5,10 @@ This module is used to do all of the preprocessing for the CEP code.  This
 includes downloading records from NCBI (via BioPython), parsing those records
 into a local sequence records, etc.
 
-This is a pure python package for correlated substitution analysis.  Specifically, it can be 
+This is a pure python package for correlated substitution analysis.  Specifically, it can be
 used for the kinds of analyses in the following publication:
 
-"Validation of coevolving residue algorithms via pipeline sensitivity analysis: ELSC and 
+"Validation of coevolving residue algorithms via pipeline sensitivity analysis: ELSC and
 OMES and ZNMI, oh my!" PLoS One, e10779. doi:10.1371/journal.pone.0010779 (2010)
 
 @author: Kevin S. Brown (University of Connecticut), Christopher A. Brown (Palomidez LLC)
@@ -18,27 +18,27 @@ This source code is provided under the BSD-3 license, duplicated as follows:
 Copyright (c) 2014, Kevin S. Brown and Christopher A. Brown
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, 
+Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice, this 
+1. Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-2. Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or other 
+2. Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or other
 materials provided with the distribution.
 
-3. Neither the name of the University of Connecticut nor the names of its contributors 
-may be used to endorse or promote products derived from this software without specific 
+3. Neither the name of the University of Connecticut nor the names of its contributors
+may be used to endorse or promote products derived from this software without specific
 prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS 
-OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
-AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
@@ -54,7 +54,7 @@ def text_concatenate(inputList,splicer=' '):
     """Simple helper function to put string descriptions back together"""
     return reduce(lambda x,y: x+splicer+y,inputList)
 
-    
+
 def clean_sequence(inputString):
     """Simple helper function to return a cleaned sequence"""
     return text_concatenate(re.findall('[A-Za-z]+',inputString),splicer='').upper()
@@ -64,7 +64,7 @@ class GenbankRetrieve(object):
     """Simple tools to retrieve Genbank records (via Genbank id) of sequences"""
     @log_function_call('Reading Genbank Ids from File')
     def __init__(self,inputFile):
-        try: 
+        try:
             inputFile = open(inputFile,'r')
             handle = inputFile.read()
             inputFile.close()
@@ -111,7 +111,7 @@ class GenbankRecord(object):
         else:
             # create from a file or a raw string
             if os.path.exists(recordFile):
-                # first check for a file to read in 
+                # first check for a file to read in
                 recordFile = open(recordFile,'r')
                 recordHandle = recordFile.read()
                 recordFile.close()
@@ -186,10 +186,10 @@ class GenbankRecord(object):
                 self.sequence = None
             # remove the large parsed text
             del self.record
-            
+
     def __repr__(self):
         return "GenbankRecord.{%s}"%(reduce(lambda x,y: x+', '+y,self.__dict__.keys()))
-        
+
 class GenbankMultipleRecords(dict):
     """Object that holds multiple Genbank records, initialized from a single Genbank file or string (multiple records)"""
     @log_function_call('Creating Multiple Genbank Records')
@@ -200,7 +200,7 @@ class GenbankMultipleRecords(dict):
         else:
             # create from a file or a raw string
             if os.path.exists(recordFile):
-                # first check for a file to read in 
+                # first check for a file to read in
                 recordFile = open(recordFile,'r')
                 recordHandle = recordFile.read()
                 recordFile.close()
@@ -211,14 +211,14 @@ class GenbankMultipleRecords(dict):
                 raise GenbankMultipleRecordsIOException
             for record in [GenbankRecord(x) for x in recordHandle.split('//\n') if 'LOCUS' in x]:
                 self[record.gi] = record
-        
+
     @log_function_call('Dumping Genbank Records')
     def dump_genbank_records(self,outputFile):
         """Dump genbank records to a file using the cPickle module"""
         outputFile = open(outputFile,'w')
         cPickle.dump(self,outputFile)
         outputFile.close()
-        
+
 class SequenceUtilities(object):
     """These are tools for simple sequence processing"""
     @staticmethod
@@ -237,7 +237,7 @@ class SequenceUtilities(object):
         for record in fastaDict:
             fastaDict[record] = gmrObject[record].sequence
         return fastaDict
-    
+
     @staticmethod
     def read_fasta_sequences(seqFile):
         """Read in sequences from fasta file and return dictionary"""
@@ -252,7 +252,7 @@ class SequenceUtilities(object):
                 seq += seqPart
             seqDict[reSeq[0].strip()]=seq
         return seqDict
-  
+
     @staticmethod
     def write_fasta_sequences(seqDict,outputFile):
          """Write dictionary sequences to fasta file"""
@@ -260,7 +260,7 @@ class SequenceUtilities(object):
          for seq in seqDict:
              outputFile.write(">%s\n%s\n"%(seq,seqDict[seq]))
          outputFile.close()
- 
+
     @staticmethod
     def read_stockholm_sequences(stoFile):
         """Read in sequences from a stockholm file and return dictionary.
@@ -327,7 +327,7 @@ class SequenceUtilities(object):
             outputFile.write("%s\t%s\n"%(seq.split(' ')[0],seqDict[seq].replace('-','.')))
         outputFile.write("//\n")
         outputFile.close()
- 
+
     @staticmethod
     @log_function_call('Filtering Sequences by Length')
     def prune_by_length(seqDict,minLen=0,maxLen=10000):
@@ -337,11 +337,11 @@ class SequenceUtilities(object):
             if len(seqDict[seq]) > minLen and len(seqDict[seq]) < maxLen:
                 newDict[seq] = seqDict[seq]
         return newDict
-        
+
     @staticmethod
     @log_function_call('Filtering Sequences by Similarity')
     def prune_by_similarity(sequences,similarity=0.95):
-        """Remove sequences that are more similar than similarity.  
+        """Remove sequences that are more similar than similarity.
         Note: removes random sequences."""
         pairwise = {}
         if '#=GC RF' in sequences:
@@ -374,7 +374,7 @@ class SequenceUtilities(object):
 
     @staticmethod
     @log_function_call('Replacing Nonstandard Amino Acids')
-    def replace_nonstandard(sequences,badSymbols=['X','B','Z']):
+    def replace_nonstandard(sequences,badSymbols=['X','B','Z','J']):
         """Replaces any of badSymbols in a dictionary of sequences with a gap.  Modifies
         dictionary of sequences in place."""
         for k in sequences:
@@ -395,17 +395,11 @@ class GenbankMultipleRecordsIOException(IOError):
     @log_function_call('ERROR : Genbank Multiple Records File')
     def __init__(self):
         print "You much initialize a Genbank Multiple Records with a file string or a file handle.  Check your selection."
-        
-class GenbankRecordTests(unittest.TestCase): 
+
+class GenbankRecordTests(unittest.TestCase):
     """Simple tests to make sure a Genbank record is being parsed correctly"""
     def setUp(self):
         pass
-        
+
 if __name__ == '__main__':
-    unittest.main()        
-        
-        
-        
-        
-        
-        
+    unittest.main()

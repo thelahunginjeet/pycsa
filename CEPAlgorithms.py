@@ -617,7 +617,7 @@ class MSAAlgorithms(MSA):
             newi = newi/newi.sum()
             newj = newj/newj.sum()
             # difference
-            delta = max(abs(newi-mui).max(),abs(newj-muj).max())
+            delta = max([abs(newi-mui).max(),abs(newj-muj).max()])
             # update and continue
             mui = newi
             muj = newj
