@@ -55,7 +55,7 @@ def calculate_distances(pdbFile,modelNumber=0,chain='A'):
 	"""
 	distances = {}
 	strucParser = pdb.PDBParser()
- 	pdbStruc = strucParser.get_structure('pdb',pdbFile)
+	pdbStruc = strucParser.get_structure('pdb',pdbFile)
 	if not pdbStruc.child_dict.has_key(modelNumber):
 		modelNumber = pdbStruc.child_dict.keys()[0]
 		print('WARNING: Model number invalid, using model',modelNumber)
@@ -105,16 +105,16 @@ def calculate_distances_offset(pdbFile,offset=0):
 	"""
 	distances = {}
 	strucParser = pdb.PDBParser()
- 	pdbStruc = strucParser.get_structure('pdb',pdbFile)
- 	modelNumber = pdbStruc.child_dict.keys()[0]
+	pdbStruc = strucParser.get_structure('pdb',pdbFile)
+	modelNumber = pdbStruc.child_dict.keys()[0]
 	if offset > 0:
 		chain1,chain2 = pdbStruc[modelNumber].child_dict.keys()[:2]
 		residues = [pdbStruc[modelNumber][chain1].child_dict,pdbStruc[modelNumber][chain2].child_dict]
 	else:
 		chain = pdbStruc[modelNumber].child_dict.keys()[0]
 		residues = [pdbStruc[modelNumber][chain].child_dict]
- 	distances = {}
- 	aminoAcids =  ['ALA','ARG','ASN','ASP','CYS','GLN','GLU','GLY','HIS','ILE','LEU','LYS','MET','PHE','PRO','SER','THR','TRP','TYR','VAL']
+	distances = {}
+	aminoAcids =  ['ALA','ARG','ASN','ASP','CYS','GLN','GLU','GLY','HIS','ILE','LEU','LYS','MET','PHE','PRO','SER','THR','TRP','TYR','VAL']
 	# using a mapping of AA to atom type (Cb,Ca) avoids lots of annoying case-handling in the distance calculations
 	atomType = {}.fromkeys(aminoAcids)
 	for k in atomType:
