@@ -120,7 +120,7 @@ class CEPPlotting(object):
         if (self.accMin is None) or (self.accMax is None) or (self.repMin is None) or (self.repMax is None):
             self.compute_axis_limits(*args)
         for i in range(len(args)):
-            (c,s,l) = self.colorWheel.next()
+            (c,s,l) = next(self.colorWheel)
             # self.cepColors[args[i]] = colors[int(math.fmod(i,len(colors)))]
             self.cepColors[args[i]] = c
             self.cepPoints[args[i]] = s
@@ -184,8 +184,8 @@ class CEPPlotting(object):
         subsample."""
         labelList = list()
         for cep in args:
-            accVals = cep.statistics['accuracy'].values()
-            repVals = cep.statistics['reproducibility'].values()
+            accVals = list(cep.statistics['accuracy'].values())
+            repVals = list(cep.statistics['reproducibility'].values())
             scatterAx.plot(accVals,repVals,self.cepColors[cep]+self.cepPoints[cep],mec=self.cepColors[cep],alpha=0.5)
             labelList.append(cep.options.file_indicator+' '+str(cep.num_sequences)+' '+cep.method)
         scatterAx.set_xlim((self.accMin,self.accMax))
@@ -201,8 +201,8 @@ class CEPPlotting(object):
         labelList = list()
         lineList = list()
         for cep in args:
-            accVals= cep.statistics['accuracy'].values()
-            repVal = cep.statistics['reproducibility'].values()[0]
+            accVals= list(cep.statistics['accuracy'].values())
+            repVal = list(cep.statistics['reproducibility'].values())[0]
             lineAx.plot([min(accVals),max(accVals)],[repVal,repVal],self.cepColors[cep]+self.cepLines[cep],alpha=0.5,lw=3)
             l = lineAx.plot([numpy.mean(accVals)],[repVal],self.cepPoints[cep],color=self.cepColors[cep],mfc=self.cepColors[cep],mec=self.cepColors[cep],markersize=12)
             lineList.append(l[0])
@@ -219,7 +219,7 @@ class CEPPlotting(object):
         """Makes a plot of the accuracy histogram (normal orientation)"""
         maxAccHeight = 0.01
         for cep in args:
-            kde = gaussian_kde(cep.statistics['accuracy'].values())
+            kde = gaussian_kde(list(cep.statistics['accuracy'].values()))
             support = numpy.linspace(self.accMin,self.accMax,self.kdepoints)
             mPDF = kde(support)
             histAx.plot(support,mPDF,self.cepColors[cep],lw=3)
@@ -241,7 +241,7 @@ class CEPPlotting(object):
         """Plots the reproducibility histogram (sideways)"""
         maxRepHeight = 0.01
         for cep in args:
-            kde = gaussian_kde(cep.statistics['reproducibility'].values())
+            kde = gaussian_kde(list(cep.statistics['reproducibility'].values()))
             support = numpy.linspace(self.repMin,self.repMax,self.kdepoints)
             mPDF = kde(support)
             histAx.plot(mPDF,support,self.cepColors[cep],lw=3)
