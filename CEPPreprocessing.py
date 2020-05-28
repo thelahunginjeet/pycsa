@@ -43,7 +43,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 
-import os, re, unittest, time, cPickle
+import os, re, unittest, time, pickle
 from Bio import Entrez
 from pycsa.CEPLogging import LogPipeline
 
@@ -214,19 +214,19 @@ class GenbankMultipleRecords(dict):
 
     @log_function_call('Dumping Genbank Records')
     def dump_genbank_records(self,outputFile):
-        """Dump genbank records to a file using the cPickle module"""
+        """Dump genbank records to a file using the pickle module"""
         outputFile = open(outputFile,'w')
-        cPickle.dump(self,outputFile)
+        pickle.dump(self,outputFile)
         outputFile.close()
 
 class SequenceUtilities(object):
     """These are tools for simple sequence processing"""
     @staticmethod
     def load_genbank_records(inputFile):
-        """Load cPickled Genbank records into an empty GenbankMultipleRecords object"""
+        """Load pickled Genbank records into an empty GenbankMultipleRecords object"""
         newGenbankMultipleRecords = GenbankMultipleRecords()
         inputFile = open(inputFile,'r')
-        newGenbankMultipleRecords = cPickle.load(inputFile)
+        newGenbankMultipleRecords = pickle.load(inputFile)
         inputFile.close()
         return newGenbankMultipleRecords
 

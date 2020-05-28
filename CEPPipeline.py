@@ -43,7 +43,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import sys, os, unittest, random, glob, cPickle, re, itertools, copy, inspect, glob
+import sys, os, unittest, random, glob, pickle, re, itertools, copy, inspect, glob
 from scipy import mean
 from scipy.stats import pearsonr, spearmanr
 from scipy.linalg import svd
@@ -312,7 +312,7 @@ class CEPPipeline(object):
         except IOError:
             raise CEPPipelineDatabaseIOException(db_file)
         else:
-            dictionary = cPickle.load(db_ptr)
+            dictionary = pickle.load(db_ptr)
             self.statistics = dictionary['statistics']
             self.options = dictionary['options']
             if dictionary.has_key('graph'):
@@ -346,7 +346,7 @@ class CEPPipeline(object):
             dictionary['graph'] = self.consensus_graph
         for attribute in self.__dict__:
             dictionary['metadata'][attribute] = self.__dict__[attribute]
-        cPickle.dump(dictionary,db_ptr,-1)
+        pickle.dump(dictionary,db_ptr,-1)
         db_ptr.close()
 
 
@@ -874,7 +874,7 @@ class CEPPipelinePruningException(Exception):
 class CEPPipelineSubsetException(Exception):
     @log_function_call('ERROR : Subset Selection')
     def __init__(self,subset):
-        print('You must choose to process subset \'a\', subset \'b\', or both \'*\' (default).  You chose: \'%s\'.  Please check your subset selection.' '%(subset))
+        print('You must choose to process subset \'a\', subset \'b\', or both \'*\' (default).  You chose: \'%s\'.  Please check your subset selection.' %(subset))
 
 class CEPPipelineMethodException(Exception):
     @log_function_call('ERROR : Method Selection')
