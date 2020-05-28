@@ -123,7 +123,7 @@ class MSA(object):
         # column-wise gap frequencies
         self.calculate_gap_frequency()
         # check to see if a reference HMMER sequence is present
-        if self.sequences.has_key('#=GC RF'):
+        if '#=GC RF' in self.sequences:
             self.hmmer = True
         else:
             self.hmmer = False
@@ -271,7 +271,7 @@ class MSA(object):
             sortIndx = argsort(asarray(freqs[c]).flatten())[::-1]
             consensus[c] = tuple([aminoAcids[x] for x in sortIndx[0:n]])
         # last thing is to assemble and dump out the whole matrix of scores
-        orderedCols = sort(freqs.keys())
+        orderedCols = sort(list(freqs.keys()))
         firstDone = False
         for c in orderedCols:
             if not firstDone:
@@ -328,7 +328,7 @@ class MSA(object):
         if len({}.fromkeys([len(x) for x in self.sequences.values()])) > 1:
             raise MSADimensionException(msaFile)
         else:
-            self.dimensions = (len(self.sequences),len(self.sequences.values()[0]))
+            self.dimensions = (len(self.sequences),len(list(self.sequences.values())[0]))
             # make a fixed list of sequences to iterate through excluding HMMER reference
             sequenceList = [self.sequences[x] for x in self.sequences if x != '#=GC RF']
             self.columns = {}
@@ -381,7 +381,7 @@ class MSA(object):
                 will be ignored, so the sizes of mapped and datadict can be quite different
         """
         # make sure the canonical sequence is present
-        if self.sequences.keys().count(canonical) == 0:
+        if list(self.sequences.keys()).count(canonical) == 0:
             raise MSACanonicalException(canonical)
         canon = {}
         mapped = {}
