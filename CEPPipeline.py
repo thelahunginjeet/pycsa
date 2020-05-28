@@ -733,7 +733,7 @@ class CEPPipeline(object):
         except:
             raise CEPPipelineStructureIOException(self.options.pdb_file)
         nR = len(self.graphs)
-        nS = len(self.graphs.values()[0])
+        nS = len(list(self.graphs.values())[0])
         for partition in self.graphs:
             for p in self.graphs[partition]:
                 acc_avg = 0.0
@@ -774,7 +774,7 @@ class CEPPipeline(object):
         '''
         self.consensus_graph = CEPNetworks.CEPGraph()
         if self.resampling_method == '_resample_splithalf':
-            norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+            norm = float(len(self.graphs.keys())*len(list(self.graphs.values())[0]))
             for partition in self.graphs:
                 self._prune_graph(partition,'a')
                 self._prune_graph(partition,'b')
@@ -784,7 +784,7 @@ class CEPPipeline(object):
                     else:
                         self.consensus_graph.add_edge(i,j,weight=1/norm)
         elif self.resampling_method == '_resample_bootstrap':
-            nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+            nG = float(len(self.graphs.keys())*len(list(self.graphs.values())[0]))
             norm = (nG*(nG-1.0))/2.0
             for partition in self.graphs:
                 self._prune_graph(partition,'boot')
@@ -818,7 +818,7 @@ class CEPPipeline(object):
         resampled graphs; there is only a single reproducibility value.
         '''
         sim_func = '_graph_similarity_'+self.options.sim_method
-        nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+        nG = float(len(self.graphs.keys())*len(list(self.graphs.values())[0]))
         norm = (nG*(nG-1.0))/2.0
         avg_sim = 0.0
         for p1 in self.graphs:
