@@ -204,7 +204,7 @@ class MSA(object):
         aminoAcids = tuple('ACDEFGHIKLMNPQRSTVWY-')
         # amino acid to row/col identity map
         aaMap = {}
-        for x in xrange(len(aminoAcids)):
+        for x in range(len(aminoAcids)):
             aaMap[aminoAcids[x]] = x
         self.doublets = {}
         self.singlets = {}
@@ -292,7 +292,7 @@ class MSA(object):
         aminoAcids = tuple('ACDEFGHIKLMNPQRSTVWY-')
         # amino acid to row/col identity map
         aaMap = {}
-        for x in xrange(len(aminoAcids)):
+        for x in range(len(aminoAcids)):
             aaMap[aminoAcids[x]] = x
         self.doublets = {}
         self.singlets = {}
@@ -332,7 +332,7 @@ class MSA(object):
             # make a fixed list of sequences to iterate through excluding HMMER reference
             sequenceList = [self.sequences[x] for x in self.sequences if x != '#=GC RF']
             self.columns = {}
-            for i in xrange(self.dimensions[1]):
+            for i in range(self.dimensions[1]):
                 self.columns[i] = [x[i] for x in sequenceList]
 
 
@@ -842,27 +842,27 @@ class MSAAlgorithms(MSA):
         Npositions = len(self.reducedColumns)
         # map column numbers to consecutive integers
         integers = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             integers[i] = self.reducedColumns.keys()[i]
         # the 20 amino acids including gap and frequencies (excluding gaps)
         codeAA = 'ACDEFGHIKLMNPQRSTVWY-'
         frequencyBG = matrix(array([0.073,0.025,0.05,0.061,0.042,0.072,0.023,0.053,0.064,0.089,0.023,0.043,0.052,0.04,0.052,0.073,0.056,0.063,0.013,0.033],dtype='float64'))
         # determine amino acid frequency at each position
         frequency =  matrix(zeros([21,Npositions],dtype='float64'))
-        for i in xrange(len(codeAA)):
-            for j in xrange(Npositions):
+        for i in range(len(codeAA)):
+            for j in range(Npositions):
                 frequency[i,j] = [x.upper() for x in self.columns[integers[j]]].count(codeAA[i])/float(Nsequences)
         # determine the most prevalent amino acid at each position
         frequencyBin = matrix(zeros([1,Npositions],dtype='float64'))
         prevalentAA = matrix(zeros([1,Npositions],dtype='int'))
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             frequencyBin[0,i] = frequency[:len(codeAA)-1,i].max()
             prevalentAA[0,i] = frequency[:len(codeAA)-1,i].argmax()
         # make a simplified alignment in binary approximation (note: gaps ignored)
         msaBin = matrix(zeros([Nsequences,Npositions],dtype='float64'))
         frequencyBGBin = matrix(zeros([1,Npositions],dtype='float64'))
-        for i in xrange(Nsequences):
-            for j in xrange(Npositions):
+        for i in range(Nsequences):
+            for j in range(Npositions):
                 if self.columns[integers[j]][i].upper() == codeAA[prevalentAA[0,j]]:
                     msaBin[i,j] = 1.0
                     frequencyBGBin[0,j] = frequencyBG[0,prevalentAA[0,j]]
@@ -874,8 +874,8 @@ class MSAAlgorithms(MSA):
         weights = matrix(log(array(frequencyBin)*array(1-frequencyBGBin)/(array(frequencyBGBin)*array(1-frequencyBin))))
         scaMatrix = array(weights.T*weights)*array(abs(correlationBin))
         scaMatrix = nan_to_num(scaMatrix)
-        for i in xrange(Npositions):
-            for j in xrange(i+1,Npositions):
+        for i in range(Npositions):
+            for j in range(i+1,Npositions):
                 self.SCA[(integers[i],integers[j])] = scaMatrix[i,j]
 
 
@@ -896,13 +896,13 @@ class MSAAlgorithms(MSA):
         Nsequences = len(self.sequences)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
             # covariance matrix calculation
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the 21st state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # REGULARIZATION?
         # invert
         eij = inv(covMat)
@@ -937,7 +937,7 @@ class MSAAlgorithms(MSA):
         Nsequences = len(self.sequences)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
@@ -946,7 +946,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the 21st state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # REGULARIZATION?
         eij = inv(covMat)
         for c1 in self.reducedColumns:
@@ -967,7 +967,7 @@ class MSAAlgorithms(MSA):
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix
         if len(self.Pi) == 0:
@@ -976,7 +976,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the last state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # now calculate
         for c1 in self.reducedColumns:
             indx1 = colToInt[c1]
@@ -1004,7 +1004,7 @@ class MSAAlgorithms(MSA):
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix
         if len(self.Pi) == 0:
@@ -1013,7 +1013,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the last state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # regularization?
         eij = inv(covMat)
         for c1 in self.reducedColumns:
@@ -1052,7 +1052,7 @@ class MSAAlgorithms(MSA):
         Nsequences = len(self.sequences)
         # column to integer mapping
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mixing with pseudocounts
         if len(self.Pi) == 0:
@@ -1061,7 +1061,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the last state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # REGULARIZATION BEFORE INVERSION?
         cijinv = inv(covMat)
         # now compute scores/direct information
@@ -1089,7 +1089,7 @@ class MSAAlgorithms(MSA):
         Npositions = len(self.reducedColumns)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
@@ -1133,7 +1133,7 @@ class MSAAlgorithms(MSA):
         Npositions = len(self.reducedColumns)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:

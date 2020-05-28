@@ -410,7 +410,7 @@ class CEPPipeline(object):
         """Split-half resampling.  Randomly partitions the master alignment into
         non-overlapping pairs of subalignments, nResamples number of times.
         """
-        for i in xrange(1,self.options.num_partitions+1):
+        for i in range(1,self.options.num_partitions+1):
             half_one = {}.fromkeys(random.sample(seq_dict.keys(),int(len(seq_dict)/2)))
             half_one[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
             half_two = {}
@@ -435,14 +435,14 @@ class CEPPipeline(object):
         but in which sequences can appear more than once.
         """
         n = len(seqDict)
-        for iboot in xrange(1,self.options.num_partitions+1):
+        for iboot in range(1,self.options.num_partitions+1):
             # list of sequence names to pick
             sk = sample_with_replacement(seq_dict.keys(),n)
             # unique-ized list
-            usk = [sk[i-1]+'_'+str(i-1) for i in xrange(1,len(sk)+1)]
+            usk = [sk[i-1]+'_'+str(i-1) for i in range(1,len(sk)+1)]
             # make the dictionary
             boot_samp = {}
-            for iseq in xrange(0,len(sk)):
+            for iseq in range(0,len(sk)):
                 boot_samp[usk[iseq]] = seq_dict[sk[iseq]]
             # append canonical (need unmodified key!)
             boot_samp[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
@@ -545,7 +545,7 @@ class CEPPipeline(object):
 
     @log_function_call('Initializing Graphs')
     def initialize_graphs(self):
-        self.graphs = {}.fromkeys(xrange(1,self.options.num_partitions+1))
+        self.graphs = {}.fromkeys(range(1,self.options.num_partitions+1))
         if self.resampling_method == '_resample_splithalf':
             for k in self.graphs:
                 self.graphs[k] = {'a':None,'b':None}
@@ -682,7 +682,7 @@ class CEPPipeline(object):
             method,S = parse_network_file(f)
             # set up ideal predictor
             if I is None:
-                I = ''.join(['1' for k in xrange(0,K)]+['0' for k in xrange(0,len(S) - K)])
+                I = ''.join(['1' for k in range(0,K)]+['0' for k in range(0,len(S) - K)])
             # add keys to data dicts if necessary
             if not acc_hamming.has_key(method):
                 acc_hamming[method] = []

@@ -119,7 +119,7 @@ class CEPPlotting(object):
         #    limits is none
         if (self.accMin is None) or (self.accMax is None) or (self.repMin is None) or (self.repMax is None):
             self.compute_axis_limits(*args)
-        for i in xrange(len(args)):
+        for i in range(len(args)):
             (c,s,l) = self.colorWheel.next()
             # self.cepColors[args[i]] = colors[int(math.fmod(i,len(colors)))]
             self.cepColors[args[i]] = c
@@ -291,7 +291,7 @@ class CEPPlotting(object):
         nList = cep.consensus_graph.nodes()
         nc = ['k' for x in nList]
         if ncData is not None:
-            for i in xrange(0,len(nList)):
+            for i in range(0,len(nList)):
                 if ncData.has_key(nList[i]):
                     nc[i] = ncData[nList[i]]
         # now make the plot
@@ -346,7 +346,7 @@ class CEPPlotting(object):
         nList = G.nodes()
         nc = [0.0 for x in nList]
         if ncData is not None:
-            for i in xrange(0,len(nList)):
+            for i in range(0,len(nList)):
                 if ncData.has_key(nList[i]):
                     nc[i] = ncData[nList[i]]
         # now make the plot
@@ -371,7 +371,7 @@ class CEPPlotting(object):
         colors = 'rgbymck'
         point = ','
         cepColors = {}.fromkeys(args)
-        for i in xrange(len(args)):
+        for i in range(len(args)):
             cepColors[args[i]] = colors[int(math.fmod(i,len(colors)))]
         cutoffs = numpy.arange(0,1,0.005).tolist()
         for cep in args:
@@ -384,7 +384,7 @@ class CEPPlotting(object):
             means = [x[0] for x in distances]
             stddevs = [x[1] for x in distances]
             pylab.plot(cutoffs,means,cepColors[cep],lw=3)
-            for i in xrange(0,len(stddevs),5):
+            for i in range(0,len(stddevs),5):
                 pylab.plot([cutoffs[i],cutoffs[i]],[means[i]-stddevs[i],means[i]+stddevs[i]],cepColors[cep],lw=1)
         if self.figDirectory is None:
             pylab.show()
@@ -399,7 +399,7 @@ class CEPPlotting(object):
         colors = 'rgbymck'
         point = ','
         cepColors = {}.fromkeys(args)
-        for i in xrange(len(args)):
+        for i in range(len(args)):
             cepColors[args[i]] = colors[int(math.fmod(i,len(colors)))]
         cutoffs = numpy.arange(0,1,0.005).tolist()
         for cep in args:

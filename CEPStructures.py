@@ -72,8 +72,8 @@ def calculate_distances(pdbFile,modelNumber=0,chain='A'):
 	for k in atomType:
 		atomType[k] = 'CB'
 	atomType['GLY'] = 'CA'
-	for i in xrange(len(residues)):
-		for j in xrange(i,len(residues)):
+	for i in range(len(residues)):
+		for j in range(i,len(residues)):
 			# loop over dicts of residues
 			for rk in [x for x in residues[i] if residues[i][x].resname in aminoAcids]:
 				for rl in [x for x in residues[j] if x != rk and residues[j][x].resname in aminoAcids]:
@@ -120,8 +120,8 @@ def calculate_distances_offset(pdbFile,offset=0):
 	for k in atomType:
 		atomType[k] = 'CB'
 	atomType['GLY'] = 'CA'
-	for i in xrange(len(residues)):
-		for j in xrange(i,len(residues)):
+	for i in range(len(residues)):
+		for j in range(i,len(residues)):
 			# setup chain shifts
 			if i + j == 0:
 				di,dj = 0,0

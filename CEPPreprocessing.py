@@ -348,8 +348,8 @@ class SequenceUtilities(object):
             # stockholm reference file gives HMM aligned positions
             # rank sequences so that you only compute upper triangular matrix
             r = sorted([x for x in sequences.keys() if x != '#=GC RF'])
-            for i in xrange(len(r)):
-                for j in xrange(i+1,len(r)):
+            for i in range(len(r)):
+                for j in range(i+1,len(r)):
                     pairs = [(x[0],x[1]) for x in zip(sequences[r[i]],sequences[r[j]],sequences['#=GC RF']) if (x[0],x[1]) != ('-','-') and x[2] == 'x']
                     length = float(len(pairs))
                     pairwise[(r[i],r[j])] = len([x for x in pairs if x[0] == x[1]])/length
@@ -357,8 +357,8 @@ class SequenceUtilities(object):
             # no stockholm reference to use
             # rank sequences so that you only compute upper triangular matrix
             r = sorted(sequences.keys())
-            for i in xrange(len(r)):
-                for j in xrange(i+1,len(r)):
+            for i in range(len(r)):
+                for j in range(i+1,len(r)):
                     pairs = [x for x in zip(sequences[r[i]],sequences[r[j]]) if x != ('-','-')]
                     length = float(len(pairs))
                     pairwise[(r[i],r[j])] = len([x for x in pairs if x[0] == x[1]])/length
@@ -379,7 +379,7 @@ class SequenceUtilities(object):
         dictionary of sequences in place."""
         for k in sequences:
             listform = list(sequences[k])
-            for i in xrange(len(listform)):
+            for i in range(len(listform)):
                 for bad in badSymbols:
                     if listform[i] == bad:
                         listform[i] = '-'
