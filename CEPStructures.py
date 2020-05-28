@@ -58,10 +58,10 @@ def calculate_distances(pdbFile,modelNumber=0,chain='A'):
  	pdbStruc = strucParser.get_structure('pdb',pdbFile)
 	if not pdbStruc.child_dict.has_key(modelNumber):
 		modelNumber = pdbStruc.child_dict.keys()[0]
-		print 'WARNING: Model number invalid, using model',modelNumber
+		print('WARNING: Model number invalid, using model',modelNumber)
 	if not pdbStruc[modelNumber].child_dict.has_key(chain):
 		chain = pdbStruc[modelNumber].child_dict.keys()[0]
-		print 'WARNING: Chain invalid, using chain',chain
+		print('WARNING: Chain invalid, using chain',chain)
 	# fetch the AAs
 	residues = [pdbStruc[modelNumber][chain].child_dict]
 	distances = {}

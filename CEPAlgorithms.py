@@ -159,7 +159,7 @@ class MSA(object):
         # clear the weights
         for k in self.seqwts:
             self.seqwts[k] = 1.0
-        print 'calculating sequence weights . . .'
+        print('calculating sequence weights . . .')
         # switch on the method
         if method is 'unweighted':
             return
@@ -209,7 +209,7 @@ class MSA(object):
             aaMap[aminoAcids[x]] = x
         self.doublets = {}
         self.singlets = {}
-        print 'calculating weighted frequencies . . .'
+        print('calculating weighted frequencies . . .')
         # singlets
         for c in self.columns:
             self.singlets[c] = matrix(zeros([len(aminoAcids),1], dtype='float64'))
@@ -297,7 +297,7 @@ class MSA(object):
             aaMap[aminoAcids[x]] = x
         self.doublets = {}
         self.singlets = {}
-        print 'calculating frequencies . . .'
+        print('calculating frequencies . . .')
         for column1 in self.columns:
             # singlets
             self.singlets[column1] = matrix(zeros([len(aminoAcids),1], dtype='float64'))
@@ -487,7 +487,7 @@ class MSAAlgorithms(MSA):
         self.entropy = {}
         # make a list of columns that are less gapped than self.gapFreqCutoff
         columnList = {}.fromkeys([c for c in self.columns if self.gaps[c] < self.gapFreqCutoff])
-        print "calculating entropy . . ."
+        print('calculating entropy . . .')
         for column in columnList:
             letters = {}.fromkeys([x for x in self.columns[column] if x is not '-'])
             numLetters = float(self.dimensions[0]-self.columns[column].count('-'))
@@ -513,7 +513,7 @@ class MSAAlgorithms(MSA):
         """Calculates the mutual information for reduced columns, including gaps."""
         self.jointEntropy = {}
         self.mutualInformation = {}
-        print 'calculating mutual information including gaps . . .'
+        print('calculating mutual information including gaps . . .')
         if len(self.Pi) == 0:
             self.mix_distributions()
         for column1 in self.reducedColumns:
@@ -635,7 +635,7 @@ class MSAAlgorithms(MSA):
         self.NMI = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating normalized mutual information (NMI) . . ."
+        print('calculating normalized mutual information (NMI) . . .')
         for column1,column2 in self.mutualInformation:
             # normalization could be zero if minEntropy is zero
             try:
@@ -648,7 +648,7 @@ class MSAAlgorithms(MSA):
         """Calculate the z-scored product normalized mutual information (natural log base) for reducedColumns"""
         self.ZNMI = {}
         self.calculate_NMI()
-        print "calculating z-scored product normalized mutual information (ZNMI) . . ."
+        print('calculating z-scored product normalized mutual information (ZNMI) . . .')
         columnNMI = {}.fromkeys(self.reducedColumns)
         for column in columnNMI:
             columnNMI[column] = []
@@ -674,7 +674,7 @@ class MSAAlgorithms(MSA):
         self.MIc = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating mutual information corrected (MIc) . . ."
+        print('calculating mutual information corrected (MIc) . . .')
         # CAREFUL IN WHAT COMES BELOW - ncols*(ncols-1)/2 IS NOT THE NUMBER OF KEYS IN THE MI DICT DUE TO
         #    DROPPING ZEROS
         CPS = {}.fromkeys(self.mutualInformation)
@@ -710,7 +710,7 @@ class MSAAlgorithms(MSA):
         self.MIp = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating mutual information product (MIp) . . ."
+        print('calculating mutual information product (MIp) . . .')
         self.MIp = copy.copy(self.mutualInformation)
         self.apc_correction(self.MIp)
 
@@ -720,7 +720,7 @@ class MSAAlgorithms(MSA):
         self.Zres = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating z-scored residual mutual information (Zres) . . ."
+        print('calculating z-scored residual mutual information (Zres) . . .')
         columnMI = {}.fromkeys(self.reducedColumns)
         for column in columnMI:
             columnMI[column] = []
@@ -766,7 +766,7 @@ class MSAAlgorithms(MSA):
         largePrime = 11173
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating residual product mutual information (RPMI) . . ."
+        print('calculating residual product mutual information (RPMI) . . .')
         columnMI = {}.fromkeys(self.reducedColumns)
         for column in columnMI:
             columnMI[column] = []
@@ -822,7 +822,7 @@ class MSAAlgorithms(MSA):
         method therefore includes gaps.
         """
         self.FCHISQ = {}
-        print 'calculating frequency-based chi-squared (FCHISQ) . . .'
+        print('calculating frequency-based chi-squared (FCHISQ) . . .')
         if len(self.Pi) == 0:
             self.mix_distributions()
         for ci in self.reducedColumns:
@@ -837,7 +837,7 @@ class MSAAlgorithms(MSA):
 
     def calculate_SCA(self):
         """Calculate the SCA 3.0 [Halabi (2009) Cell] (natural log base) for reducedColumns"""
-        print "calculating statistical coupling analysis (SCA) . . ."
+        print('calculating statistical coupling analysis (SCA) . . .')
         self.SCA = {}
         Nsequences = self.dimensions[0]
         Npositions = len(self.reducedColumns)
@@ -887,7 +887,7 @@ class MSAAlgorithms(MSA):
         information but does not require self-consistent field calculation.  This algorithm may
         behave quite poorly without large numbers of pseudocounts.
         """
-        print "calculating NMF . . ."
+        print('calculating NMF . . ')
         self.NMF = {}
         # calculate effective pair and singlet probabilities if they do not exist
         if len(self.Pi) == 0:
@@ -931,7 +931,7 @@ class MSAAlgorithms(MSA):
         applied to the covariance matrix before inversion.  Thus, this algorithm might behave
         extremely poorly without large numbers of psuedocounts.
         """
-        print 'calculating nmfDI . . .'
+        print('calculating nmfDI . . .')
         self.nmfDI = {}
         # ignore the heavily gapped columns
         Npositions = len(self.reducedColumns)
@@ -963,7 +963,7 @@ class MSAAlgorithms(MSA):
         """
         Independent pair approximation, using DI to map to a salar.
         """
-        print 'calculating ipDI . . .'
+        print('calculating ipDI . . .')
         self.ipDI = {}
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
@@ -1000,7 +1000,7 @@ class MSAAlgorithms(MSA):
         """
         Seesak-Monasson, using DI to map to a scalar.
         """
-        print 'calculating smDI . . .'
+        print('calculating smDI . . .')
         self.smDI = {}
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
@@ -1046,7 +1046,7 @@ class MSAAlgorithms(MSA):
         """
         Direct Information for scoring, based on Thouless-Anderson-Palmer (TAP) mean-field equations.
         """
-        print 'calculating tapDI . . .'
+        print('calculating tapDI . . .')
         self.tapDI = {}
         # ignore the heavily gapped columns
         Npositions = len(self.reducedColumns)
@@ -1084,7 +1084,7 @@ class MSAAlgorithms(MSA):
         """Uses L2-regularized inversion of the full covariance matrix to calculate pair scores.  In most respects,
         this is the L2 equivalent of PSICOV.
         """
-        print "calculating RIDGE . . . "
+        print('calculating RIDGE . . .')
         self.RIDGE = {}
         # ignore heavily gapped columns
         Npositions = len(self.reducedColumns)
@@ -1128,7 +1128,7 @@ class MSAAlgorithms(MSA):
         """
         Uses sparse covariance matrix estimation (Jones et al. 2012) to compute pair scores.
         """
-        print "calculating PSICOV . . . "
+        print('calculating PSICOV . . .')
         self.PSICOV = {}
         # ignore heavily gapped columns
         Npositions = len(self.reducedColumns)
@@ -1164,12 +1164,12 @@ class MSAAlgorithms(MSA):
 
 class MSACanonicalException(KeyError):
     def __init__(self,canonical):
-        print "Your canonical sequence, '%s', cannot be found in the alignment."
+        print('Your canonical sequence, '%s', cannot be found in the alignment.' %canonical)
 
 
 class MSADimensionException(ValueError):
     def __init__(self,alnFile):
-        print "Your alignment file, '%s' doesn't appear to have the proper dimensions.  Every sequence should be the same length (aka an alignment).  Please check your input file."%(alnFile)
+        print('Your alignment file, \'%s\' doesn\'t appear to have the proper dimensions.  Every sequence should be the same length (aka an alignment).  Please check your input file.' %(alnFile))
 
 
 class MSAAlgorithmTests(unittest.TestCase):

@@ -512,13 +512,13 @@ class CEPPipeline(object):
             for aln_file in alignment_files:
                 #parts = os.path.splitext(os.path.split(aln_file)[1])[0].split('_')
                 parts = deconstruct_file_name(aln_file)
-                print "----------building networks for '%s'----------" % os.path.split(aln_file)[1]
+                print('----------building networks for \'%s\'----------' % os.path.split(aln_file)[1])
                 msa = CEPAlgorithms.MSAAlgorithms(aln_file,gapFreqCutoff=self.options.gap,pcType=self.options.pc_type,pcMix=self.options.pc_mix,
                     pcLambda=self.options.pc_lambda,swtMethod=self.options.swt_method,cutoff=self.options.cutoff)
                 for method in method_list:
                     nwk_file = os.path.join(self.network_directory,construct_file_name([parts[0],parts[1],method,parts[2],parts[3]],self.network_ext))
                     if os.path.exists(nwk_file):
-                        print "network for '%s' already exists, skipping . . ."%method
+                        print('network for \'%s\' already exists, skipping . . .' %method)
                     else:
                         # map method variable to unbound methods and then call method
                         method_call = {'mi':msa.calculate_mutual_information, 'nmi':msa.calculate_NMI, 'znmi':msa.calculate_ZNMI, 'mip':msa.calculate_MIp, \
@@ -834,72 +834,72 @@ class CEPPipeline(object):
 class CEPPipelineDirectoryIOException(IOError):
     @log_function_call('ERROR : Input Directory')
     def __init__(self):
-        print "There is a problem with your input directory.  Check the path name."
+        print('There is a problem with your input directory.  Check the path name.')
 
 class CEPPipelineAlignmentIOException(IOError):
     @log_function_call('ERROR : Alignment File')
     def __init__(self,fileName):
-        print "There is a problem with your input alignment file: %s.  Check the path and file name."%(fileName)
+        print('There is a problem with your input alignment file: %s.  Check the path and file name.' %(fileName))
 
 class CEPPipelineStructureIOException(IOError):
     @log_function_call('ERROR : Structure')
     def __init__(self,pdb):
-        print "There is a problem loading your pdb structure: %s.  Check the path and file name."%(pdb)
+        print('There is a problem loading your pdb structure: %s.  Check the path and file name.' %(pdb))
 
 class CEPPipelineDistanceException(Exception):
     @log_function_call('ERROR : Distances')
     def __init__(self):
-        print "Residue-residue distances do not exist; compute them first before computing contacts."
+        print('Residue-residue distances do not exist; compute them first before computing contacts.')
 
 class CEPPipelineCanonException(KeyError):
     @log_function_call('ERROR : Canonical Sequence')
     def __init__(self,canon):
-        print "Your canonical sequence: '%s' cannot be found in the input file.  Please check the sequence name and file."%(canon)
+        print('Your canonical sequence: \'%s\' cannot be found in the input file.  Please check the sequence name and file.' %(canon))
 
 class CEPPipelineDatabaseIOException(IOError):
     @log_function_call('ERROR : Database File')
     def __init__(self,name):
-        print "There is a problem loading your database file: %s.  Check the path and file name."%(name)
+        print('There is a problem loading your database file: %s.  Check the path and file name.' %(name))
 
 class CEPPipelineNetworkException(Exception):
     @log_function_call('ERROR : Network Files')
     def __init__(self):
-        print "You have attempted to calculate graphs without network files.  Please make your networks first, then calculate the graphs."
+        print('You have attempted to calculate graphs without network files.  Please make your networks first, then calculate the graphs.')
 
 class CEPPipelinePruningException(Exception):
     @log_function_call('ERROR : Pruning Method')
     def __init__(self,pruning):
-        print "Your choice of pruning method, '%s', is not supported.  Please check the available methods and change your selection."%(pruning)
+        print('Your choice of pruning method, \'%s\', is not supported.  Please check the available methods and change your selection.' %(pruning))
 
 class CEPPipelineSubsetException(Exception):
     @log_function_call('ERROR : Subset Selection')
     def __init__(self,subset):
-        print "You must choose to process subset 'a', subset 'b', or both '*' (default).  You chose: '%s'.  Please check your subset selection."%(subset)
+        print('You must choose to process subset \'a\', subset \'b\', or both \'*\' (default).  You chose: \'%s\'.  Please check your subset selection.' '%(subset))
 
 class CEPPipelineMethodException(Exception):
     @log_function_call('ERROR : Method Selection')
     def __init__(self,method):
-        print "You must pick a supported method; '%s' is not supported.  Please check the method you have selected for making networks."%(method)
+        print('You must pick a supported method; \'%s\' is not supported.  Please check the method you have selected for making networks.' %(method))
 
 class CEPPipelineResamplingMethodException(AttributeError):
     @log_function_call('ERROR : Resampling Plan Selection')
     def __init__(self,method):
-        print "Method %s for resampling not currently supported.  Please choose an allowed resampling plan."%(method)
+        print('Method %s for resampling not currently supported.  Please choose an allowed resampling plan.' %(method))
 
 class CEPPipelineOptionsConflict(Exception):
     @log_function_call('ERROR : Incompatible Options')
     def __init__(self,method1,method2):
-        print "Option %s is not compatible with option %s. Please check your input options."%(method1,method2)
+        print('Option %s is not compatible with option %s. Please check your input options.' %(method1,method2))
 
 class CEPPipelineDistanceMethodException(Exception):
     @log_function_call('ERROR : Accuracy Method Error')
     def __init__(self,method):
-        print "Method %s for accuracy transformation not recognized.  Please choose from an allowed transformation."%(method)
+        print('Method %s for accuracy transformation not recognized.  Please choose from an allowed transformation.' %(method))
 
 class CEPPipelineStatisticsException(Exception):
     @log_function_call('ERROR: Graphs Not Present')
     def __init__(self):
-        print "Graphs need to be loaded before statistics can be calculated.  Run read_graphs() then try again."
+        print('Graphs need to be loaded before statistics can be calculated.  Run read_graphs() then try again.')
 
 class CEPPipelineTests(unittest.TestCase):
     def setUp(self):

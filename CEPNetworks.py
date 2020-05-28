@@ -165,12 +165,12 @@ class CEPGraph(nxGraph):
 class CEPGraphIOException(IOError):
 	@log_function_call('ERROR : Network File Input')
 	def __init__(self,nwkFile):
-		print "The network file you have provided, '%s', does not exist.  Please check your file selection."%(nwkFile)
+		print('The network file you have provided, \'%s\', does not exist.  Please check your file selection.' %(nwkFile))
 
 class CEPGraphWeightException(Exception):
 	@log_function_call('ERROR : Graph Not Weighted')
 	def __init__(self):
-		print "The graph you have provided is not a weighted graph.  Most of the methods provided are pointless for binary graphs."
+		print('The graph you have provided is not a weighted graph.  Most of the methods provided are pointless for binary graphs.')
 
 class CEPNetworksTests(unittest.TestCase):
 	def setUp(self):

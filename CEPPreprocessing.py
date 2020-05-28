@@ -77,7 +77,7 @@ class GenbankRetrieve(object):
     @log_function_call('Downloading Genebank Ids')
     def download_genbank_records(self,outputFile):
         """Used to retrieve and write Genbank text record from an input list of Genbank ids"""
-        print "Number of sequences to retrieve: ", len(self.genbankIds)
+        print('Number of sequences to retrieve:',len(self.genbankIds))
         counter = 1
         try:
             outputFile = open(outputFile,'a')
@@ -85,19 +85,19 @@ class GenbankRetrieve(object):
             raise GenbankIOException
         else:
             for genbankId in self.genbankIds:
-                print "Fetching sequence # %d, gi:%s"%(counter,genbankId)
+                print('Fetching sequence # %d, gi:%s' %(counter,genbankId))
                 try:
                     genbankHandle = Entrez.efetch(db="protein", id=genbankId, rettype="gb")
                     genbankRecord = genbankHandle.read()
                     outputFile.write(genbankRecord)
                     counter += 1
                 except ValueError:
-                    print "Download of gi:%s failed, moving on to next sequence . . ."%(genbankId)
-                    print "Will try again later . . ."
+                    print('Download of gi:%s failed, moving on to next sequence . . .' %(genbankId))
+                    print('Will try again later . . .')
                     genbankIds.append(genbankId) # add current ID to end of the list
                 except IOError:
-                    print "NCBI server is temporarily rejecting jobs . . ."
-                    print "Trying again in 15 seconds . . ."
+                    print('NCBI server is temporarily rejecting jobs . . .')
+                    print('Trying again in 15 seconds . . .')
                     time.sleep(15)
                     genbankIds.append(genbankId) # add current ID to end of the list
             outputFile.close()
@@ -389,12 +389,12 @@ class SequenceUtilities(object):
 class GenbankIOException(IOError):
     @log_function_call('ERROR : IO File')
     def __init__(self):
-        print "There is a problem loading your input/output file.  Check the path and file name."
+        print('There is a problem loading your input/output file.  Check the path and file name.')
 
 class GenbankMultipleRecordsIOException(IOError):
     @log_function_call('ERROR : Genbank Multiple Records File')
     def __init__(self):
-        print "You much initialize a Genbank Multiple Records with a file string or a file handle.  Check your selection."
+        print('You must initialize a Genbank Multiple Records with a file string or a file handle.  Check your selection.')
 
 class GenbankRecordTests(unittest.TestCase):
     """Simple tests to make sure a Genbank record is being parsed correctly"""
