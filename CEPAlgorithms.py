@@ -575,7 +575,7 @@ class MSAAlgorithms(MSA):
         MIp) on those scores.  The input score dictionary is modified during this call.
         """
         columnS = {}.fromkeys(self.reducedColumns)
-        meanS = mean(S.values())
+        meanS = mean(list(S.values()))
         for column in columnS:
             columnS[column] = []
         for column1,column2 in S:
