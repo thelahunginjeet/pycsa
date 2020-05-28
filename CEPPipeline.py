@@ -778,7 +778,7 @@ class CEPPipeline(object):
             for partition in self.graphs:
                 self._prune_graph(partition,'a')
                 self._prune_graph(partition,'b')
-                for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
+                for i,j in list(self.graphs[partition]['a'].edges())+list(self.graphs[partition]['b'].edges()):
                     if self.consensus_graph.has_edge(i,j):
                         self.consensus_graph[i][j]['weight'] += 1/norm
                     else:
