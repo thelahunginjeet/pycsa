@@ -71,7 +71,8 @@ def plot_pipelines(method_list,main_directory,options):
         db_file = main_directory+'databases/pdz_800_'+meth+'.pydb'
         # just pass None to options, as they will be read from the database file
         ceps[meth] = CEPPipeline.CEPPipeline(options=None,database=db_file)
-        plot.net_plot(ceps[meth],0.75)
+        # network plotting currently has a bug 
+        # plot.plot_network(ceps[meth],0.75)
     plot.plot_accuracy_reproducibility(*ceps.values())
 
 
@@ -86,7 +87,7 @@ if __name__ == '__main__':
     options = CEPPipeline.CEPParameters(main_directory,alignment_file,canon_sequence)
 
     # modify some of the options (see CEPPipeline for a full list of options and their defaults)
-    options.set_parameters(pdb_file='1iu0.pdb',num_partitions=10,file_indicator='pdz',resampling_method='splithalf',acc_method='bacc')
+    options.set_parameters(pdb_file='1iu0.pdb',num_partitions=3,file_indicator='pdz',resampling_method='splithalf',acc_method='bacc')
 
     # list of methods (see CEPAlgorithms for the full list of methods)
     method_list = ['mi','zres','mip']
