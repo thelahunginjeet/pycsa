@@ -292,7 +292,7 @@ class CEPPlotting(object):
         nc = ['k' for x in nList]
         if ncData is not None:
             for i in range(0,len(nList)):
-                if ncData.has_key(nList[i]):
+                if nList[i] in ncData:
                     nc[i] = ncData[nList[i]]
         # now make the plot
         pylab.figure(figsize=(8,8))
@@ -347,7 +347,7 @@ class CEPPlotting(object):
         nc = [0.0 for x in nList]
         if ncData is not None:
             for i in range(0,len(nList)):
-                if ncData.has_key(nList[i]):
+                if nList[i] in ncData:
                     nc[i] = ncData[nList[i]]
         # now make the plot
         pylab.figure(figsize=(8,8))

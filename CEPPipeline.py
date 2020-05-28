@@ -70,7 +70,7 @@ def get_fileset_nums(nwk_dir):
     for f in files:
         num_part = f.split('/')[-1].split('.')[0].split('_')[-2]
         num_part = int(num_part)
-        if not unique_ind.has_key(num_part):
+        if num_part not in unique_ind:
             unique_ind[num_part] = None
     return unique_ind.keys()
 
@@ -316,7 +316,7 @@ class CEPPipeline(object):
             dictionary = pickle.load(db_ptr)
             self.statistics = dictionary['statistics']
             self.options = dictionary['options']
-            if dictionary.has_key('graph'):
+            if 'graph' in dictionary:
                 self.consensus_graph = dictionary['graph']
             for attribute in dictionary['metadata']:
                 self.__dict__[attribute] = dictionary['metadata'][attribute]
@@ -624,7 +624,7 @@ class CEPPipeline(object):
                 # read the scores into a dictionary and figure out the method name
                 method,scores = parse_network_file(f)
                 # add key to the acc dict if necessary
-                if not self.statistics['accuracy'].has_key(method):
+                if method not in self.statistics['accuracy']:
                     self.statistics['accuracy'][method] = []
                 # save the scores for rank aggregation
                 score_list.append(scores)
