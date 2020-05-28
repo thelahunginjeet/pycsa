@@ -5,9 +5,9 @@ import pycsa.CEPStructures as cepstruc
 def sort_by_value(D,reverse=False):
     """
     There are many ways to sort a dictionary by value and return lists/tuples/etc.
-    This is one recommended in PEP265.
+    This is recommended for python 3 on StackOverflow.
     """
-    return sorted(D.iteritems(),key=itemgetter(1),reverse=reverse)
+    return [(k,D[k]) for k in sorted(D,key=D.get,reverse=reverse)]
 
 
 class ConfusionMatrix(object):
@@ -49,7 +49,7 @@ class ConfusionMatrix(object):
         if type(predicted) == str:
             predicted = [int(c) for c in predicted]
             actual = [int(c) for c in actual]
-        for i in xrange(0,len(predicted)):
+        for i in range(0,len(predicted)):
             row = pn[predicted[i]]
             col = pn[actual[i]]
             self.confmatrix[row,col] += 1
@@ -215,7 +215,7 @@ class CEPAccuracyCalculator(object):
         # make the ideal string
         K = len(self.contacts)
         S = len(scores)
-        idealstring = ''.join(['1' for k in xrange(0,K)]+['0' for k in xrange(0,S - K)])
+        idealstring = ''.join(['1' for k in range(0,K)]+['0' for k in range(0,S - K)])
         return scorestring,idealstring
 
 
@@ -304,10 +304,10 @@ class CEPAccuracyCalculator(object):
         sylist = [int(c) for c in sy]
         wthamm = 0.0
         # compute distance
-        for i in xrange(0,len(sxlist)):
+        for i in range(0,len(sxlist)):
             wthamm += log(i+2)*xor(sxlist[i],sylist[i])
         # normalizer
-        Z = sum([log(i+2) for i in xrange(0,self.K)]) + sum([log(i+2) for i in xrange(len(sx)-self.K,len(sx))])
+        Z = sum([log(i+2) for i in range(0,self.K)]) + sum([log(i+2) for i in range(len(sx)-self.K,len(sx))])
         return 1.0 - wthamm/Z
 
 
