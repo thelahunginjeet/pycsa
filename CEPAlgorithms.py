@@ -1164,7 +1164,7 @@ class MSAAlgorithms(MSA):
 
 class MSACanonicalException(KeyError):
     def __init__(self,canonical):
-        print('Your canonical sequence, '%s', cannot be found in the alignment.' %canonical)
+        print('Your canonical sequence, \'%s\', cannot be found in the alignment.' %canonical)
 
 
 class MSADimensionException(ValueError):
