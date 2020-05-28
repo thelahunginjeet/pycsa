@@ -71,6 +71,7 @@ class CEPGraph(nxGraph):
 			except TypeError:
 				super(CEPGraph,self).__init__()
 
+
 	def is_weighted(self):
 		edges = {'weight':False}
 		for v1,v2 in self.edges():
@@ -78,6 +79,7 @@ class CEPGraph(nxGraph):
 				edges['weight'] = True
 				break
 		return edges['weight']
+
 
 	def read_network(self,nwkFile):
 		"""Read in a network file to the current graph object"""
@@ -88,6 +90,7 @@ class CEPGraph(nxGraph):
 		for edge in network:
 			link = re.search('(\d+)\t(\d+)\t(-?\d+\.\d+)\t(\d+\.\d+)',edge)
 			self.add_edge(int(link.group(1)), int(link.group(2)), weight=float(link.group(3)),pvalue=float(link.group(4)))
+
 
 	def compute_node_degrees(self):
 		"""Computes the node degree (weighted sum if applicable) for a graph"""
@@ -101,24 +104,27 @@ class CEPGraph(nxGraph):
 		halfDegreeSum = 0.5*(array(degrees.values()).sum())
 		return degrees, halfDegreeSum
 
+
 	def prune_graph(self, threshold):
 		"""Removes all weighted edges below a certain threshold along with any nodes
 		that have been orphaned (no neighbors) by the pruning process"""
-		for v1,v2 in self.edges():
+		nodes = self.nodes()
+		for v1,v2 in list(self.edges()):
 			if self[v1][v2]['weight'] < threshold:
 				self.remove_edge(v1,v2)
-		for n in self.nodes():
-			if len(self.neighbors(n)) < 1:
+		for n in list(self.nodes()):
+			if len(list(self.neighbors(n))) < 1:
 				self.remove_node(n)
+
 
 	def calculate_pvalue(self,number=None):
 		"""Removes edges that aren't significant given their p-values (p > 0.05)
 		Note: all MHT corrections, etc. should be taken care of in the method and
 		not here (see CEPAlgorithms)"""
-		edges = self.edges()
-		for v1,v2 in edges:
+		for v1,v2 in list(self.edges()):
 			if self[v1][v2]['pvalue'] > 0.05:
 				self.remove_edge(v1,v2)
+
 
 	def calculate_mst(self,number=None):
 		"""Calculates a maximal spanning tree mapping large weights to small weights"""
@@ -126,13 +132,11 @@ class CEPGraph(nxGraph):
 		maxWeight = max([self[v[0]][v[1]]['weight'] for v in self.edges()])
 		for v1,v2 in self.edges():
 			graph[v1][v2]['weight'] = maxWeight - self[v1][v2]['weight']
-		edges = self.edges()
 		tree = networkx.minimum_spanning_tree(graph,weight='weight')
-		for v1,v2 in edges:
-			if (v1,v2) in tree.edges():
-				pass
-			else:
+		for v1,v2 in list(self.edges()):
+			if (v1,v2) not in tree.edges():
 				self.remove_edge(v1,v2)
+
 
 	def calculate_top_n(self,number):
 		"""Removes edges except for those with the n-largest weights (n = number)"""
@@ -141,12 +145,10 @@ class CEPGraph(nxGraph):
 		weights.reverse()
 		# only keep n-largest vertex pairs
 		weights = [(v[1],v[2]) for v in weights[:number]]
-		edges = self.edges()
-		for v1,v2 in edges:
-			if (v1,v2) in weights:
-				pass
-			else:
+		for v1,v2 in list(self.edges()):
+			if (v1,v2) not in weights:
 				self.remove_edge(v1,v2)
+
 
 	def calculate_bottom_n(self,number):
 		"""Removes edges except for those with the n-smallest weights (n = number)"""
@@ -154,23 +156,20 @@ class CEPGraph(nxGraph):
 		weights.sort()
 		# only keep n-smallest vertex pairs
 		weights = [(v[1],v[2]) for v in weights[:number]]
-		edges = self.edges()
-		for v1,v2 in edges:
-			if (v1,v2) in weights:
-				pass
-			else:
+		for v1,v2 in list(self.edges()):
+			if (v1,v2) not in weights:
 				self.remove_edge(v1,v2)
 
 
 class CEPGraphIOException(IOError):
 	@log_function_call('ERROR : Network File Input')
 	def __init__(self,nwkFile):
-		print "The network file you have provided, '%s', does not exist.  Please check your file selection."%(nwkFile)
+		print('The network file you have provided, \'%s\', does not exist.  Please check your file selection.' %(nwkFile))
 
 class CEPGraphWeightException(Exception):
 	@log_function_call('ERROR : Graph Not Weighted')
 	def __init__(self):
-		print "The graph you have provided is not a weighted graph.  Most of the methods provided are pointless for binary graphs."
+		print('The graph you have provided is not a weighted graph.  Most of the methods provided are pointless for binary graphs.')
 
 class CEPNetworksTests(unittest.TestCase):
 	def setUp(self):

@@ -55,13 +55,13 @@ def calculate_distances(pdbFile,modelNumber=0,chain='A'):
 	"""
 	distances = {}
 	strucParser = pdb.PDBParser()
- 	pdbStruc = strucParser.get_structure('pdb',pdbFile)
-	if not pdbStruc.child_dict.has_key(modelNumber):
-		modelNumber = pdbStruc.child_dict.keys()[0]
-		print 'WARNING: Model number invalid, using model',modelNumber
-	if not pdbStruc[modelNumber].child_dict.has_key(chain):
-		chain = pdbStruc[modelNumber].child_dict.keys()[0]
-		print 'WARNING: Chain invalid, using chain',chain
+	pdbStruc = strucParser.get_structure('pdb',pdbFile)
+	if modelNumber not in pdbStruc.child_dict:
+		modelNumber = list(pdbStruc.child_dict.keys())[0]
+		print('WARNING: Model number invalid, using model',modelNumber)
+	if chain not in pdbStruc[modelNumber].child_dict:
+		chain = list(pdbStruc[modelNumber].child_dict.keys())[0]
+		print('WARNING: Chain invalid, using chain',chain)
 	# fetch the AAs
 	residues = [pdbStruc[modelNumber][chain].child_dict]
 	distances = {}
@@ -72,8 +72,8 @@ def calculate_distances(pdbFile,modelNumber=0,chain='A'):
 	for k in atomType:
 		atomType[k] = 'CB'
 	atomType['GLY'] = 'CA'
-	for i in xrange(len(residues)):
-		for j in xrange(i,len(residues)):
+	for i in range(len(residues)):
+		for j in range(i,len(residues)):
 			# loop over dicts of residues
 			for rk in [x for x in residues[i] if residues[i][x].resname in aminoAcids]:
 				for rl in [x for x in residues[j] if x != rk and residues[j][x].resname in aminoAcids]:
@@ -105,23 +105,23 @@ def calculate_distances_offset(pdbFile,offset=0):
 	"""
 	distances = {}
 	strucParser = pdb.PDBParser()
- 	pdbStruc = strucParser.get_structure('pdb',pdbFile)
- 	modelNumber = pdbStruc.child_dict.keys()[0]
+	pdbStruc = strucParser.get_structure('pdb',pdbFile)
+	modelNumber = pdbStruc.child_dict.keys()[0]
 	if offset > 0:
 		chain1,chain2 = pdbStruc[modelNumber].child_dict.keys()[:2]
 		residues = [pdbStruc[modelNumber][chain1].child_dict,pdbStruc[modelNumber][chain2].child_dict]
 	else:
 		chain = pdbStruc[modelNumber].child_dict.keys()[0]
 		residues = [pdbStruc[modelNumber][chain].child_dict]
- 	distances = {}
- 	aminoAcids =  ['ALA','ARG','ASN','ASP','CYS','GLN','GLU','GLY','HIS','ILE','LEU','LYS','MET','PHE','PRO','SER','THR','TRP','TYR','VAL']
+	distances = {}
+	aminoAcids =  ['ALA','ARG','ASN','ASP','CYS','GLN','GLU','GLY','HIS','ILE','LEU','LYS','MET','PHE','PRO','SER','THR','TRP','TYR','VAL']
 	# using a mapping of AA to atom type (Cb,Ca) avoids lots of annoying case-handling in the distance calculations
 	atomType = {}.fromkeys(aminoAcids)
 	for k in atomType:
 		atomType[k] = 'CB'
 	atomType['GLY'] = 'CA'
-	for i in xrange(len(residues)):
-		for j in xrange(i,len(residues)):
+	for i in range(len(residues)):
+		for j in range(i,len(residues)):
 			# setup chain shifts
 			if i + j == 0:
 				di,dj = 0,0

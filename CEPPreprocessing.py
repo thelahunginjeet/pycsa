@@ -43,8 +43,9 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 
-import os, re, unittest, time, cPickle
+import os, re, unittest, time, pickle
 from Bio import Entrez
+from functools import reduce
 from pycsa.CEPLogging import LogPipeline
 
 # decorator function to be used for logging purposes
@@ -77,7 +78,7 @@ class GenbankRetrieve(object):
     @log_function_call('Downloading Genebank Ids')
     def download_genbank_records(self,outputFile):
         """Used to retrieve and write Genbank text record from an input list of Genbank ids"""
-        print "Number of sequences to retrieve: ", len(self.genbankIds)
+        print('Number of sequences to retrieve:',len(self.genbankIds))
         counter = 1
         try:
             outputFile = open(outputFile,'a')
@@ -85,19 +86,19 @@ class GenbankRetrieve(object):
             raise GenbankIOException
         else:
             for genbankId in self.genbankIds:
-                print "Fetching sequence # %d, gi:%s"%(counter,genbankId)
+                print('Fetching sequence # %d, gi:%s' %(counter,genbankId))
                 try:
                     genbankHandle = Entrez.efetch(db="protein", id=genbankId, rettype="gb")
                     genbankRecord = genbankHandle.read()
                     outputFile.write(genbankRecord)
                     counter += 1
                 except ValueError:
-                    print "Download of gi:%s failed, moving on to next sequence . . ."%(genbankId)
-                    print "Will try again later . . ."
+                    print('Download of gi:%s failed, moving on to next sequence . . .' %(genbankId))
+                    print('Will try again later . . .')
                     genbankIds.append(genbankId) # add current ID to end of the list
                 except IOError:
-                    print "NCBI server is temporarily rejecting jobs . . ."
-                    print "Trying again in 15 seconds . . ."
+                    print('NCBI server is temporarily rejecting jobs . . .')
+                    print('Trying again in 15 seconds . . .')
                     time.sleep(15)
                     genbankIds.append(genbankId) # add current ID to end of the list
             outputFile.close()
@@ -214,19 +215,19 @@ class GenbankMultipleRecords(dict):
 
     @log_function_call('Dumping Genbank Records')
     def dump_genbank_records(self,outputFile):
-        """Dump genbank records to a file using the cPickle module"""
+        """Dump genbank records to a file using the pickle module"""
         outputFile = open(outputFile,'w')
-        cPickle.dump(self,outputFile)
+        pickle.dump(self,outputFile)
         outputFile.close()
 
 class SequenceUtilities(object):
     """These are tools for simple sequence processing"""
     @staticmethod
     def load_genbank_records(inputFile):
-        """Load cPickled Genbank records into an empty GenbankMultipleRecords object"""
+        """Load pickled Genbank records into an empty GenbankMultipleRecords object"""
         newGenbankMultipleRecords = GenbankMultipleRecords()
         inputFile = open(inputFile,'r')
-        newGenbankMultipleRecords = cPickle.load(inputFile)
+        newGenbankMultipleRecords = pickle.load(inputFile)
         inputFile.close()
         return newGenbankMultipleRecords
 
@@ -348,8 +349,8 @@ class SequenceUtilities(object):
             # stockholm reference file gives HMM aligned positions
             # rank sequences so that you only compute upper triangular matrix
             r = sorted([x for x in sequences.keys() if x != '#=GC RF'])
-            for i in xrange(len(r)):
-                for j in xrange(i+1,len(r)):
+            for i in range(len(r)):
+                for j in range(i+1,len(r)):
                     pairs = [(x[0],x[1]) for x in zip(sequences[r[i]],sequences[r[j]],sequences['#=GC RF']) if (x[0],x[1]) != ('-','-') and x[2] == 'x']
                     length = float(len(pairs))
                     pairwise[(r[i],r[j])] = len([x for x in pairs if x[0] == x[1]])/length
@@ -357,8 +358,8 @@ class SequenceUtilities(object):
             # no stockholm reference to use
             # rank sequences so that you only compute upper triangular matrix
             r = sorted(sequences.keys())
-            for i in xrange(len(r)):
-                for j in xrange(i+1,len(r)):
+            for i in range(len(r)):
+                for j in range(i+1,len(r)):
                     pairs = [x for x in zip(sequences[r[i]],sequences[r[j]]) if x != ('-','-')]
                     length = float(len(pairs))
                     pairwise[(r[i],r[j])] = len([x for x in pairs if x[0] == x[1]])/length
@@ -379,7 +380,7 @@ class SequenceUtilities(object):
         dictionary of sequences in place."""
         for k in sequences:
             listform = list(sequences[k])
-            for i in xrange(len(listform)):
+            for i in range(len(listform)):
                 for bad in badSymbols:
                     if listform[i] == bad:
                         listform[i] = '-'
@@ -389,12 +390,12 @@ class SequenceUtilities(object):
 class GenbankIOException(IOError):
     @log_function_call('ERROR : IO File')
     def __init__(self):
-        print "There is a problem loading your input/output file.  Check the path and file name."
+        print('There is a problem loading your input/output file.  Check the path and file name.')
 
 class GenbankMultipleRecordsIOException(IOError):
     @log_function_call('ERROR : Genbank Multiple Records File')
     def __init__(self):
-        print "You much initialize a Genbank Multiple Records with a file string or a file handle.  Check your selection."
+        print('You must initialize a Genbank Multiple Records with a file string or a file handle.  Check your selection.')
 
 class GenbankRecordTests(unittest.TestCase):
     """Simple tests to make sure a Genbank record is being parsed correctly"""

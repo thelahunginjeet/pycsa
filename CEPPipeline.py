@@ -43,7 +43,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import sys, os, unittest, random, glob, cPickle, re, itertools, copy, inspect, glob
+import sys, os, unittest, random, glob, pickle, re, itertools, copy, inspect, glob
 from scipy import mean
 from scipy.stats import pearsonr, spearmanr
 from scipy.linalg import svd
@@ -54,6 +54,7 @@ from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
 from pycsa import CEPAlgorithms,CEPNetworks,CEPAccuracyCalculator,CEPGraphSimilarity
 from pyrankagg import rankagg
+from functools import reduce
 
 
 # decorator function to be used for logging purposes
@@ -69,7 +70,7 @@ def get_fileset_nums(nwk_dir):
     for f in files:
         num_part = f.split('/')[-1].split('.')[0].split('_')[-2]
         num_part = int(num_part)
-        if not unique_ind.has_key(num_part):
+        if num_part not in unique_ind:
             unique_ind[num_part] = None
     return unique_ind.keys()
 
@@ -312,10 +313,10 @@ class CEPPipeline(object):
         except IOError:
             raise CEPPipelineDatabaseIOException(db_file)
         else:
-            dictionary = cPickle.load(db_ptr)
+            dictionary = pickle.load(db_ptr)
             self.statistics = dictionary['statistics']
             self.options = dictionary['options']
-            if dictionary.has_key('graph'):
+            if 'graph' in dictionary:
                 self.consensus_graph = dictionary['graph']
             for attribute in dictionary['metadata']:
                 self.__dict__[attribute] = dictionary['metadata'][attribute]
@@ -346,7 +347,7 @@ class CEPPipeline(object):
             dictionary['graph'] = self.consensus_graph
         for attribute in self.__dict__:
             dictionary['metadata'][attribute] = self.__dict__[attribute]
-        cPickle.dump(dictionary,db_ptr,-1)
+        pickle.dump(dictionary,db_ptr,-1)
         db_ptr.close()
 
 
@@ -410,7 +411,7 @@ class CEPPipeline(object):
         """Split-half resampling.  Randomly partitions the master alignment into
         non-overlapping pairs of subalignments, nResamples number of times.
         """
-        for i in xrange(1,self.options.num_partitions+1):
+        for i in range(1,self.options.num_partitions+1):
             half_one = {}.fromkeys(random.sample(seq_dict.keys(),int(len(seq_dict)/2)))
             half_one[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
             half_two = {}
@@ -435,14 +436,14 @@ class CEPPipeline(object):
         but in which sequences can appear more than once.
         """
         n = len(seqDict)
-        for iboot in xrange(1,self.options.num_partitions+1):
+        for iboot in range(1,self.options.num_partitions+1):
             # list of sequence names to pick
             sk = sample_with_replacement(seq_dict.keys(),n)
             # unique-ized list
-            usk = [sk[i-1]+'_'+str(i-1) for i in xrange(1,len(sk)+1)]
+            usk = [sk[i-1]+'_'+str(i-1) for i in range(1,len(sk)+1)]
             # make the dictionary
             boot_samp = {}
-            for iseq in xrange(0,len(sk)):
+            for iseq in range(0,len(sk)):
                 boot_samp[usk[iseq]] = seq_dict[sk[iseq]]
             # append canonical (need unmodified key!)
             boot_samp[self.options.canon_sequence] = seq_dict[self.options.canon_sequence]
@@ -512,13 +513,13 @@ class CEPPipeline(object):
             for aln_file in alignment_files:
                 #parts = os.path.splitext(os.path.split(aln_file)[1])[0].split('_')
                 parts = deconstruct_file_name(aln_file)
-                print "----------building networks for '%s'----------" % os.path.split(aln_file)[1]
+                print('----------building networks for \'%s\'----------' % os.path.split(aln_file)[1])
                 msa = CEPAlgorithms.MSAAlgorithms(aln_file,gapFreqCutoff=self.options.gap,pcType=self.options.pc_type,pcMix=self.options.pc_mix,
                     pcLambda=self.options.pc_lambda,swtMethod=self.options.swt_method,cutoff=self.options.cutoff)
                 for method in method_list:
                     nwk_file = os.path.join(self.network_directory,construct_file_name([parts[0],parts[1],method,parts[2],parts[3]],self.network_ext))
                     if os.path.exists(nwk_file):
-                        print "network for '%s' already exists, skipping . . ."%method
+                        print('network for \'%s\' already exists, skipping . . .' %method)
                     else:
                         # map method variable to unbound methods and then call method
                         method_call = {'mi':msa.calculate_mutual_information, 'nmi':msa.calculate_NMI, 'znmi':msa.calculate_ZNMI, 'mip':msa.calculate_MIp, \
@@ -545,7 +546,7 @@ class CEPPipeline(object):
 
     @log_function_call('Initializing Graphs')
     def initialize_graphs(self):
-        self.graphs = {}.fromkeys(xrange(1,self.options.num_partitions+1))
+        self.graphs = {}.fromkeys(range(1,self.options.num_partitions+1))
         if self.resampling_method == '_resample_splithalf':
             for k in self.graphs:
                 self.graphs[k] = {'a':None,'b':None}
@@ -623,7 +624,7 @@ class CEPPipeline(object):
                 # read the scores into a dictionary and figure out the method name
                 method,scores = parse_network_file(f)
                 # add key to the acc dict if necessary
-                if not self.statistics['accuracy'].has_key(method):
+                if method not in self.statistics['accuracy']:
                     self.statistics['accuracy'][method] = []
                 # save the scores for rank aggregation
                 score_list.append(scores)
@@ -682,7 +683,7 @@ class CEPPipeline(object):
             method,S = parse_network_file(f)
             # set up ideal predictor
             if I is None:
-                I = ''.join(['1' for k in xrange(0,K)]+['0' for k in xrange(0,len(S) - K)])
+                I = ''.join(['1' for k in range(0,K)]+['0' for k in range(0,len(S) - K)])
             # add keys to data dicts if necessary
             if not acc_hamming.has_key(method):
                 acc_hamming[method] = []
@@ -732,7 +733,7 @@ class CEPPipeline(object):
         except:
             raise CEPPipelineStructureIOException(self.options.pdb_file)
         nR = len(self.graphs)
-        nS = len(self.graphs.values()[0])
+        nS = len(list(self.graphs.values())[0])
         for partition in self.graphs:
             for p in self.graphs[partition]:
                 acc_avg = 0.0
@@ -773,17 +774,17 @@ class CEPPipeline(object):
         '''
         self.consensus_graph = CEPNetworks.CEPGraph()
         if self.resampling_method == '_resample_splithalf':
-            norm = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+            norm = float(len(self.graphs.keys())*len(list(self.graphs.values())[0]))
             for partition in self.graphs:
                 self._prune_graph(partition,'a')
                 self._prune_graph(partition,'b')
-                for i,j in self.graphs[partition]['a'].edges()+self.graphs[partition]['b'].edges():
+                for i,j in list(self.graphs[partition]['a'].edges())+list(self.graphs[partition]['b'].edges()):
                     if self.consensus_graph.has_edge(i,j):
                         self.consensus_graph[i][j]['weight'] += 1/norm
                     else:
                         self.consensus_graph.add_edge(i,j,weight=1/norm)
         elif self.resampling_method == '_resample_bootstrap':
-            nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+            nG = float(len(self.graphs.keys())*len(list(self.graphs.values())[0]))
             norm = (nG*(nG-1.0))/2.0
             for partition in self.graphs:
                 self._prune_graph(partition,'boot')
@@ -817,7 +818,7 @@ class CEPPipeline(object):
         resampled graphs; there is only a single reproducibility value.
         '''
         sim_func = '_graph_similarity_'+self.options.sim_method
-        nG = float(len(self.graphs.keys())*len(self.graphs.values()[0]))
+        nG = float(len(self.graphs.keys())*len(list(self.graphs.values())[0]))
         norm = (nG*(nG-1.0))/2.0
         avg_sim = 0.0
         for p1 in self.graphs:
@@ -834,72 +835,72 @@ class CEPPipeline(object):
 class CEPPipelineDirectoryIOException(IOError):
     @log_function_call('ERROR : Input Directory')
     def __init__(self):
-        print "There is a problem with your input directory.  Check the path name."
+        print('There is a problem with your input directory.  Check the path name.')
 
 class CEPPipelineAlignmentIOException(IOError):
     @log_function_call('ERROR : Alignment File')
     def __init__(self,fileName):
-        print "There is a problem with your input alignment file: %s.  Check the path and file name."%(fileName)
+        print('There is a problem with your input alignment file: %s.  Check the path and file name.' %(fileName))
 
 class CEPPipelineStructureIOException(IOError):
     @log_function_call('ERROR : Structure')
     def __init__(self,pdb):
-        print "There is a problem loading your pdb structure: %s.  Check the path and file name."%(pdb)
+        print('There is a problem loading your pdb structure: %s.  Check the path and file name.' %(pdb))
 
 class CEPPipelineDistanceException(Exception):
     @log_function_call('ERROR : Distances')
     def __init__(self):
-        print "Residue-residue distances do not exist; compute them first before computing contacts."
+        print('Residue-residue distances do not exist; compute them first before computing contacts.')
 
 class CEPPipelineCanonException(KeyError):
     @log_function_call('ERROR : Canonical Sequence')
     def __init__(self,canon):
-        print "Your canonical sequence: '%s' cannot be found in the input file.  Please check the sequence name and file."%(canon)
+        print('Your canonical sequence: \'%s\' cannot be found in the input file.  Please check the sequence name and file.' %(canon))
 
 class CEPPipelineDatabaseIOException(IOError):
     @log_function_call('ERROR : Database File')
     def __init__(self,name):
-        print "There is a problem loading your database file: %s.  Check the path and file name."%(name)
+        print('There is a problem loading your database file: %s.  Check the path and file name.' %(name))
 
 class CEPPipelineNetworkException(Exception):
     @log_function_call('ERROR : Network Files')
     def __init__(self):
-        print "You have attempted to calculate graphs without network files.  Please make your networks first, then calculate the graphs."
+        print('You have attempted to calculate graphs without network files.  Please make your networks first, then calculate the graphs.')
 
 class CEPPipelinePruningException(Exception):
     @log_function_call('ERROR : Pruning Method')
     def __init__(self,pruning):
-        print "Your choice of pruning method, '%s', is not supported.  Please check the available methods and change your selection."%(pruning)
+        print('Your choice of pruning method, \'%s\', is not supported.  Please check the available methods and change your selection.' %(pruning))
 
 class CEPPipelineSubsetException(Exception):
     @log_function_call('ERROR : Subset Selection')
     def __init__(self,subset):
-        print "You must choose to process subset 'a', subset 'b', or both '*' (default).  You chose: '%s'.  Please check your subset selection."%(subset)
+        print('You must choose to process subset \'a\', subset \'b\', or both \'*\' (default).  You chose: \'%s\'.  Please check your subset selection.' %(subset))
 
 class CEPPipelineMethodException(Exception):
     @log_function_call('ERROR : Method Selection')
     def __init__(self,method):
-        print "You must pick a supported method; '%s' is not supported.  Please check the method you have selected for making networks."%(method)
+        print('You must pick a supported method; \'%s\' is not supported.  Please check the method you have selected for making networks.' %(method))
 
 class CEPPipelineResamplingMethodException(AttributeError):
     @log_function_call('ERROR : Resampling Plan Selection')
     def __init__(self,method):
-        print "Method %s for resampling not currently supported.  Please choose an allowed resampling plan."%(method)
+        print('Method %s for resampling not currently supported.  Please choose an allowed resampling plan.' %(method))
 
 class CEPPipelineOptionsConflict(Exception):
     @log_function_call('ERROR : Incompatible Options')
     def __init__(self,method1,method2):
-        print "Option %s is not compatible with option %s. Please check your input options."%(method1,method2)
+        print('Option %s is not compatible with option %s. Please check your input options.' %(method1,method2))
 
 class CEPPipelineDistanceMethodException(Exception):
     @log_function_call('ERROR : Accuracy Method Error')
     def __init__(self,method):
-        print "Method %s for accuracy transformation not recognized.  Please choose from an allowed transformation."%(method)
+        print('Method %s for accuracy transformation not recognized.  Please choose from an allowed transformation.' %(method))
 
 class CEPPipelineStatisticsException(Exception):
     @log_function_call('ERROR: Graphs Not Present')
     def __init__(self):
-        print "Graphs need to be loaded before statistics can be calculated.  Run read_graphs() then try again."
+        print('Graphs need to be loaded before statistics can be calculated.  Run read_graphs() then try again.')
 
 class CEPPipelineTests(unittest.TestCase):
     def setUp(self):

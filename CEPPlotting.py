@@ -46,7 +46,7 @@ import sys, os, unittest, pylab, math, numpy, copy, networkx, scipy
 from scipy.stats import gaussian_kde
 from matplotlib.ticker import FuncFormatter
 import networkx as nx
-
+import matplotlib.pyplot as plt
 
 basic_colors = ('b', 'g', 'r', 'c', 'm', 'k','y')
 basic_symbols = ('o', 's', '^', 'v', '<', ">", 'x', 'D', 'h', 'p')
@@ -119,8 +119,8 @@ class CEPPlotting(object):
         #    limits is none
         if (self.accMin is None) or (self.accMax is None) or (self.repMin is None) or (self.repMax is None):
             self.compute_axis_limits(*args)
-        for i in xrange(len(args)):
-            (c,s,l) = self.colorWheel.next()
+        for i in range(len(args)):
+            (c,s,l) = next(self.colorWheel)
             # self.cepColors[args[i]] = colors[int(math.fmod(i,len(colors)))]
             self.cepColors[args[i]] = c
             self.cepPoints[args[i]] = s
@@ -184,8 +184,8 @@ class CEPPlotting(object):
         subsample."""
         labelList = list()
         for cep in args:
-            accVals = cep.statistics['accuracy'].values()
-            repVals = cep.statistics['reproducibility'].values()
+            accVals = list(cep.statistics['accuracy'].values())
+            repVals = list(cep.statistics['reproducibility'].values())
             scatterAx.plot(accVals,repVals,self.cepColors[cep]+self.cepPoints[cep],mec=self.cepColors[cep],alpha=0.5)
             labelList.append(cep.options.file_indicator+' '+str(cep.num_sequences)+' '+cep.method)
         scatterAx.set_xlim((self.accMin,self.accMax))
@@ -201,8 +201,8 @@ class CEPPlotting(object):
         labelList = list()
         lineList = list()
         for cep in args:
-            accVals= cep.statistics['accuracy'].values()
-            repVal = cep.statistics['reproducibility'].values()[0]
+            accVals= list(cep.statistics['accuracy'].values())
+            repVal = list(cep.statistics['reproducibility'].values())[0]
             lineAx.plot([min(accVals),max(accVals)],[repVal,repVal],self.cepColors[cep]+self.cepLines[cep],alpha=0.5,lw=3)
             l = lineAx.plot([numpy.mean(accVals)],[repVal],self.cepPoints[cep],color=self.cepColors[cep],mfc=self.cepColors[cep],mec=self.cepColors[cep],markersize=12)
             lineList.append(l[0])
@@ -219,7 +219,7 @@ class CEPPlotting(object):
         """Makes a plot of the accuracy histogram (normal orientation)"""
         maxAccHeight = 0.01
         for cep in args:
-            kde = gaussian_kde(cep.statistics['accuracy'].values())
+            kde = gaussian_kde(list(cep.statistics['accuracy'].values()))
             support = numpy.linspace(self.accMin,self.accMax,self.kdepoints)
             mPDF = kde(support)
             histAx.plot(support,mPDF,self.cepColors[cep],lw=3)
@@ -241,7 +241,7 @@ class CEPPlotting(object):
         """Plots the reproducibility histogram (sideways)"""
         maxRepHeight = 0.01
         for cep in args:
-            kde = gaussian_kde(cep.statistics['reproducibility'].values())
+            kde = gaussian_kde(list(cep.statistics['reproducibility'].values()))
             support = numpy.linspace(self.repMin,self.repMax,self.kdepoints)
             mPDF = kde(support)
             histAx.plot(mPDF,support,self.cepColors[cep],lw=3)
@@ -259,6 +259,75 @@ class CEPPlotting(object):
         histAx.set_xticks([])
 
 
+    def plot_network(self,cep,rcut,pos=None,fig_size=12,knode=2.0,node_size=None,base_size=20,draw_labels=False,font_size=12,color='k'):
+        '''
+        Supports drawing of directed and undirected graphs, custom node and label sizing, and custom edge transparency.  Basically a copy of
+        plot_community without needing to specify a partition.
+
+        Returns the layout position and will accept same, in order to fix node positioning between graph draws.
+        '''
+        # --- graph preparation ---
+        # if the consensus graph was produced from voting, consensus_graph will be
+        #   a list - so just plot the 0th elements
+        if type(cep.consensus_graph) is list:
+            G = copy.deepcopy(cep.consensus_graph[0])
+        else:
+            G = copy.deepcopy(cep.consensus_graph)
+        # prune the graph
+        G.prune_graph(rcut)
+
+        # --- plotting ---
+        # set node size
+        nodes = list(G.nodes())
+        if node_size is None:
+            ns_dict = {n:base_size for n in nodes}
+            fs_dict = {n:font_size for n in nodes}
+        else:
+            max_val = max(node_size)
+            min_val = min(node_size)
+            # remap to [base_size,10*base_size]
+            ns_dict = {nodes[i]:base_size + 9*base_size*((node_size[i] - min_val)/(max_val - min_val)) for i in range(len(nodes))}
+            # remap font_size to [font_size,4*font_size]
+            fs_dict = {nodes[i]:font_size + 3*font_size*((node_size[i] - min_val)/(max_val - min_val)) for i in range(len(nodes))}
+        # now start drawing the figure
+        plt.figure(figsize=(fig_size,fig_size))
+        if pos is None:
+            pos = nx.spring_layout(G,k=knode*(1.0/numpy.sqrt(len(nodes))))
+        # draw nodes or labels
+        if draw_labels:
+            nx.draw_networkx_nodes(G,pos,node_size=[ns_dict[x] for x in nodes],node_color=color,alpha=0.0)
+        else:
+            nx.draw_networkx_nodes(G,pos,node_size=[ns_dict[x] for x in nodes],node_color=color)
+        # now the edges.  Annoyingly, networkx gives different return types for nx.draw_network_edges if the
+        #   if the graph is directed or undirected
+        edges = nx.draw_networkx_edges(G,pos,edge_color='k',width=2,node_size=[ns_dict[x] for x in nodes],arrowsize=20)
+        edge_wts = [G.get_edge_data(e[0],e[1])['weight'] for e in G.edges()]
+        # map alpha range to [0.2,1.0]
+        max_wt = max(edge_wts)
+        min_wt = min(edge_wts)
+        for i in range(len(edges)):
+            x = edge_wts[i]
+            y = 0.2 + (1.0 - 0.2)*((x-min_wt)/(max_wt-min_wt))
+            edges[i].set_alpha(y)
+        # draw labels if we are doing that
+        if draw_labels:
+            labels = nx.draw_networkx_labels(G,pos,font_size=font_size)
+            for l in labels:
+                labels[l].set_color(color)
+                labels[l].set_fontsize(fs_dict[l])
+        plt.xticks([])
+        plt.yticks([])
+        plt.box('off')
+        plt.tight_layout()
+        pylab.savefig(os.path.join(self.figDirectory,'network_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
+
+
+class CEPPlottingTests(unittest.TestCase):
+    def setUp(self):
+        pass
+
+
+    '''
     def ring_plot(self,cep,rcut,ncData=None,layout='twopi'):
         """
         Draws a consensus pipeline reproducibility graph and saves it or
@@ -291,8 +360,8 @@ class CEPPlotting(object):
         nList = cep.consensus_graph.nodes()
         nc = ['k' for x in nList]
         if ncData is not None:
-            for i in xrange(0,len(nList)):
-                if ncData.has_key(nList[i]):
+            for i in range(0,len(nList)):
+                if nList[i] in ncData:
                     nc[i] = ncData[nList[i]]
         # now make the plot
         pylab.figure(figsize=(8,8))
@@ -309,7 +378,7 @@ class CEPPlotting(object):
                 format=self.figFormat,bbox_inches='tight')
 
 
-    def net_plot(self,cep,rcut,ncData=None,layout='neato',cmap=pylab.cm.RdYlGn):
+    def net_plot(self,cep,rcut,ncData=None,layout='fdp',cmap=pylab.cm.RdYlGn):
         """
         Draws a pipeline reproducibility graph and saves it or displays it.
         This version uses energy- or force-based layouts, includes node
@@ -346,8 +415,8 @@ class CEPPlotting(object):
         nList = G.nodes()
         nc = [0.0 for x in nList]
         if ncData is not None:
-            for i in xrange(0,len(nList)):
-                if ncData.has_key(nList[i]):
+            for i in range(0,len(nList)):
+                if nList[i] in ncData:
                     nc[i] = ncData[nList[i]]
         # now make the plot
         pylab.figure(figsize=(8,8))
@@ -360,68 +429,7 @@ class CEPPlotting(object):
         else:
             pylab.savefig(os.path.join(self.figDirectory,'network_spring_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,
                 format=self.figFormat,bbox_inches='tight')
-
-
     '''
-    # FROM HERE ON OUT THESE MAY NOT WORK - NEED TO BE UPDATED
-    def plot_accuracy_versus_cutoff(self, *args):
-        """Makes a plot of accuracy versus cutoff for edge resampling
-        Note: it take a variable number of arguments (i.e. pass a list of CEPPipeline objects)"""
-        # setup colors
-        colors = 'rgbymck'
-        point = ','
-        cepColors = {}.fromkeys(args)
-        for i in xrange(len(args)):
-            cepColors[args[i]] = colors[int(math.fmod(i,len(colors)))]
-        cutoffs = numpy.arange(0,1,0.005).tolist()
-        for cep in args:
-            distances = list()
-            graph = copy.deepcopy(cep.consensus_graph)
-            for cutoff in cutoffs:
-                graph.prune_graph(cutoff)
-                edges = [cep.distances[x] for x in graph.edges()]
-                distances.append((scipy.mean(edges),scipy.std(edges)))
-            means = [x[0] for x in distances]
-            stddevs = [x[1] for x in distances]
-            pylab.plot(cutoffs,means,cepColors[cep],lw=3)
-            for i in xrange(0,len(stddevs),5):
-                pylab.plot([cutoffs[i],cutoffs[i]],[means[i]-stddevs[i],means[i]+stddevs[i]],cepColors[cep],lw=1)
-        if self.figDirectory is None:
-            pylab.show()
-        else:
-            pylab.savefig(os.path.join(self.figDirectory,'accuracy_cutoff')+'.'+self.figFormat,format=self.figFormat)
-
-
-    def plot_accuracy_versus_percolation(self, *args):
-        """Makes a plot of accuracy versus percolation (largest connected component) for edge resampling
-        Note: it take a variable number of arguments (i.e. pass a list of CEPPipeline objects)"""
-        # setup colors
-        colors = 'rgbymck'
-        point = ','
-        cepColors = {}.fromkeys(args)
-        for i in xrange(len(args)):
-            cepColors[args[i]] = colors[int(math.fmod(i,len(colors)))]
-        cutoffs = numpy.arange(0,1,0.005).tolist()
-        for cep in args:
-            percolation = list()
-            graph = copy.deepcopy(cep.consensus_graph)
-            for cutoff in cutoffs:
-                graph.prune_graph(cutoff)
-                components = map(lambda x: len(x), networkx.connected_components(graph))
-                if len(components) == 0:
-                    percolation.append(0)
-                else:
-                    percolation.append(max(components))
-            pylab.plot(cutoffs,percolation,cepColors[cep],lw=3)
-        if self.figDirectory is None:
-            pylab.show()
-        else:
-            pylab.savefig(os.path.join(self.figDirectory,'accuracy_percolation')+'.'+self.figFormat,format=self.figFormat)
-    '''
-
-class CEPPlottingTests(unittest.TestCase):
-    def setUp(self):
-        pass
 
 
 if __name__ == '__main__':

@@ -49,7 +49,6 @@ from numpy.random import randn, permutation
 from numpy.linalg import cholesky, svd, pinv, inv, eig
 from scipy.stats import ks_2samp, linregress
 from scipy import randn
-from itertools import izip,imap
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
 from sklearn.covariance import graph_lasso
@@ -106,7 +105,7 @@ def fractional_similarity(s1,s2):
     """
     assert len(s1) == len(s2)
     # number of dissimilar positions
-    h = 1.0*sum(imap(operator.ne,s1,s2))
+    h = 1.0*sum(map(operator.ne,s1,s2))
     return 1.0 - h/len(s1)
 
 
@@ -124,7 +123,7 @@ class MSA(object):
         # column-wise gap frequencies
         self.calculate_gap_frequency()
         # check to see if a reference HMMER sequence is present
-        if self.sequences.has_key('#=GC RF'):
+        if '#=GC RF' in self.sequences:
             self.hmmer = True
         else:
             self.hmmer = False
@@ -159,7 +158,7 @@ class MSA(object):
         # clear the weights
         for k in self.seqwts:
             self.seqwts[k] = 1.0
-        print 'calculating sequence weights . . .'
+        print('calculating sequence weights . . .')
         # switch on the method
         if method is 'unweighted':
             return
@@ -205,11 +204,11 @@ class MSA(object):
         aminoAcids = tuple('ACDEFGHIKLMNPQRSTVWY-')
         # amino acid to row/col identity map
         aaMap = {}
-        for x in xrange(len(aminoAcids)):
+        for x in range(len(aminoAcids)):
             aaMap[aminoAcids[x]] = x
         self.doublets = {}
         self.singlets = {}
-        print 'calculating weighted frequencies . . .'
+        print('calculating weighted frequencies . . .')
         # singlets
         for c in self.columns:
             self.singlets[c] = matrix(zeros([len(aminoAcids),1], dtype='float64'))
@@ -272,7 +271,7 @@ class MSA(object):
             sortIndx = argsort(asarray(freqs[c]).flatten())[::-1]
             consensus[c] = tuple([aminoAcids[x] for x in sortIndx[0:n]])
         # last thing is to assemble and dump out the whole matrix of scores
-        orderedCols = sort(freqs.keys())
+        orderedCols = sort(list(freqs.keys()))
         firstDone = False
         for c in orderedCols:
             if not firstDone:
@@ -293,11 +292,11 @@ class MSA(object):
         aminoAcids = tuple('ACDEFGHIKLMNPQRSTVWY-')
         # amino acid to row/col identity map
         aaMap = {}
-        for x in xrange(len(aminoAcids)):
+        for x in range(len(aminoAcids)):
             aaMap[aminoAcids[x]] = x
         self.doublets = {}
         self.singlets = {}
-        print 'calculating frequencies . . .'
+        print('calculating frequencies . . .')
         for column1 in self.columns:
             # singlets
             self.singlets[column1] = matrix(zeros([len(aminoAcids),1], dtype='float64'))
@@ -312,7 +311,7 @@ class MSA(object):
             for column2 in [x for x in self.columns if x > column1]:
                 self.doublets[(column1,column2)] = matrix(zeros([len(aminoAcids),len(aminoAcids)], dtype='float64'))
                 # get all pairs
-                pairs = [p for p in izip(self.columns[column1],self.columns[column2])]
+                pairs = [p for p in zip(self.columns[column1],self.columns[column2])]
                 punique = {}.fromkeys(pairs)
                 for p in punique:
                     pcount = pairs.count(p)
@@ -329,11 +328,11 @@ class MSA(object):
         if len({}.fromkeys([len(x) for x in self.sequences.values()])) > 1:
             raise MSADimensionException(msaFile)
         else:
-            self.dimensions = (len(self.sequences),len(self.sequences.values()[0]))
+            self.dimensions = (len(self.sequences),len(list(self.sequences.values())[0]))
             # make a fixed list of sequences to iterate through excluding HMMER reference
             sequenceList = [self.sequences[x] for x in self.sequences if x != '#=GC RF']
             self.columns = {}
-            for i in xrange(self.dimensions[1]):
+            for i in range(self.dimensions[1]):
                 self.columns[i] = [x[i] for x in sequenceList]
 
 
@@ -382,7 +381,7 @@ class MSA(object):
                 will be ignored, so the sizes of mapped and datadict can be quite different
         """
         # make sure the canonical sequence is present
-        if self.sequences.keys().count(canonical) == 0:
+        if list(self.sequences.keys()).count(canonical) == 0:
             raise MSACanonicalException(canonical)
         canon = {}
         mapped = {}
@@ -487,7 +486,7 @@ class MSAAlgorithms(MSA):
         self.entropy = {}
         # make a list of columns that are less gapped than self.gapFreqCutoff
         columnList = {}.fromkeys([c for c in self.columns if self.gaps[c] < self.gapFreqCutoff])
-        print "calculating entropy . . ."
+        print('calculating entropy . . .')
         for column in columnList:
             letters = {}.fromkeys([x for x in self.columns[column] if x is not '-'])
             numLetters = float(self.dimensions[0]-self.columns[column].count('-'))
@@ -513,7 +512,7 @@ class MSAAlgorithms(MSA):
         """Calculates the mutual information for reduced columns, including gaps."""
         self.jointEntropy = {}
         self.mutualInformation = {}
-        print 'calculating mutual information including gaps . . .'
+        print('calculating mutual information including gaps . . .')
         if len(self.Pi) == 0:
             self.mix_distributions()
         for column1 in self.reducedColumns:
@@ -576,7 +575,7 @@ class MSAAlgorithms(MSA):
         MIp) on those scores.  The input score dictionary is modified during this call.
         """
         columnS = {}.fromkeys(self.reducedColumns)
-        meanS = mean(S.values())
+        meanS = mean(list(S.values()))
         for column in columnS:
             columnS[column] = []
         for column1,column2 in S:
@@ -635,7 +634,7 @@ class MSAAlgorithms(MSA):
         self.NMI = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating normalized mutual information (NMI) . . ."
+        print('calculating normalized mutual information (NMI) . . .')
         for column1,column2 in self.mutualInformation:
             # normalization could be zero if minEntropy is zero
             try:
@@ -648,7 +647,7 @@ class MSAAlgorithms(MSA):
         """Calculate the z-scored product normalized mutual information (natural log base) for reducedColumns"""
         self.ZNMI = {}
         self.calculate_NMI()
-        print "calculating z-scored product normalized mutual information (ZNMI) . . ."
+        print('calculating z-scored product normalized mutual information (ZNMI) . . .')
         columnNMI = {}.fromkeys(self.reducedColumns)
         for column in columnNMI:
             columnNMI[column] = []
@@ -674,7 +673,7 @@ class MSAAlgorithms(MSA):
         self.MIc = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating mutual information corrected (MIc) . . ."
+        print('calculating mutual information corrected (MIc) . . .')
         # CAREFUL IN WHAT COMES BELOW - ncols*(ncols-1)/2 IS NOT THE NUMBER OF KEYS IN THE MI DICT DUE TO
         #    DROPPING ZEROS
         CPS = {}.fromkeys(self.mutualInformation)
@@ -710,7 +709,7 @@ class MSAAlgorithms(MSA):
         self.MIp = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating mutual information product (MIp) . . ."
+        print('calculating mutual information product (MIp) . . .')
         self.MIp = copy.copy(self.mutualInformation)
         self.apc_correction(self.MIp)
 
@@ -720,7 +719,7 @@ class MSAAlgorithms(MSA):
         self.Zres = {}
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating z-scored residual mutual information (Zres) . . ."
+        print('calculating z-scored residual mutual information (Zres) . . .')
         columnMI = {}.fromkeys(self.reducedColumns)
         for column in columnMI:
             columnMI[column] = []
@@ -766,7 +765,7 @@ class MSAAlgorithms(MSA):
         largePrime = 11173
         if len(self.mutualInformation) == 0:
             self.calculate_mutual_information()
-        print "calculating residual product mutual information (RPMI) . . ."
+        print('calculating residual product mutual information (RPMI) . . .')
         columnMI = {}.fromkeys(self.reducedColumns)
         for column in columnMI:
             columnMI[column] = []
@@ -822,7 +821,7 @@ class MSAAlgorithms(MSA):
         method therefore includes gaps.
         """
         self.FCHISQ = {}
-        print 'calculating frequency-based chi-squared (FCHISQ) . . .'
+        print('calculating frequency-based chi-squared (FCHISQ) . . .')
         if len(self.Pi) == 0:
             self.mix_distributions()
         for ci in self.reducedColumns:
@@ -837,33 +836,33 @@ class MSAAlgorithms(MSA):
 
     def calculate_SCA(self):
         """Calculate the SCA 3.0 [Halabi (2009) Cell] (natural log base) for reducedColumns"""
-        print "calculating statistical coupling analysis (SCA) . . ."
+        print('calculating statistical coupling analysis (SCA) . . .')
         self.SCA = {}
         Nsequences = self.dimensions[0]
         Npositions = len(self.reducedColumns)
         # map column numbers to consecutive integers
         integers = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             integers[i] = self.reducedColumns.keys()[i]
         # the 20 amino acids including gap and frequencies (excluding gaps)
         codeAA = 'ACDEFGHIKLMNPQRSTVWY-'
         frequencyBG = matrix(array([0.073,0.025,0.05,0.061,0.042,0.072,0.023,0.053,0.064,0.089,0.023,0.043,0.052,0.04,0.052,0.073,0.056,0.063,0.013,0.033],dtype='float64'))
         # determine amino acid frequency at each position
         frequency =  matrix(zeros([21,Npositions],dtype='float64'))
-        for i in xrange(len(codeAA)):
-            for j in xrange(Npositions):
+        for i in range(len(codeAA)):
+            for j in range(Npositions):
                 frequency[i,j] = [x.upper() for x in self.columns[integers[j]]].count(codeAA[i])/float(Nsequences)
         # determine the most prevalent amino acid at each position
         frequencyBin = matrix(zeros([1,Npositions],dtype='float64'))
         prevalentAA = matrix(zeros([1,Npositions],dtype='int'))
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             frequencyBin[0,i] = frequency[:len(codeAA)-1,i].max()
             prevalentAA[0,i] = frequency[:len(codeAA)-1,i].argmax()
         # make a simplified alignment in binary approximation (note: gaps ignored)
         msaBin = matrix(zeros([Nsequences,Npositions],dtype='float64'))
         frequencyBGBin = matrix(zeros([1,Npositions],dtype='float64'))
-        for i in xrange(Nsequences):
-            for j in xrange(Npositions):
+        for i in range(Nsequences):
+            for j in range(Npositions):
                 if self.columns[integers[j]][i].upper() == codeAA[prevalentAA[0,j]]:
                     msaBin[i,j] = 1.0
                     frequencyBGBin[0,j] = frequencyBG[0,prevalentAA[0,j]]
@@ -875,8 +874,8 @@ class MSAAlgorithms(MSA):
         weights = matrix(log(array(frequencyBin)*array(1-frequencyBGBin)/(array(frequencyBGBin)*array(1-frequencyBin))))
         scaMatrix = array(weights.T*weights)*array(abs(correlationBin))
         scaMatrix = nan_to_num(scaMatrix)
-        for i in xrange(Npositions):
-            for j in xrange(i+1,Npositions):
+        for i in range(Npositions):
+            for j in range(i+1,Npositions):
                 self.SCA[(integers[i],integers[j])] = scaMatrix[i,j]
 
 
@@ -887,7 +886,7 @@ class MSAAlgorithms(MSA):
         information but does not require self-consistent field calculation.  This algorithm may
         behave quite poorly without large numbers of pseudocounts.
         """
-        print "calculating NMF . . ."
+        print('calculating NMF . . ')
         self.NMF = {}
         # calculate effective pair and singlet probabilities if they do not exist
         if len(self.Pi) == 0:
@@ -897,13 +896,13 @@ class MSAAlgorithms(MSA):
         Nsequences = len(self.sequences)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
             # covariance matrix calculation
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the 21st state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # REGULARIZATION?
         # invert
         eij = inv(covMat)
@@ -931,14 +930,14 @@ class MSAAlgorithms(MSA):
         applied to the covariance matrix before inversion.  Thus, this algorithm might behave
         extremely poorly without large numbers of psuedocounts.
         """
-        print 'calculating nmfDI . . .'
+        print('calculating nmfDI . . .')
         self.nmfDI = {}
         # ignore the heavily gapped columns
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
@@ -947,7 +946,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the 21st state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # REGULARIZATION?
         eij = inv(covMat)
         for c1 in self.reducedColumns:
@@ -963,12 +962,12 @@ class MSAAlgorithms(MSA):
         """
         Independent pair approximation, using DI to map to a salar.
         """
-        print 'calculating ipDI . . .'
+        print('calculating ipDI . . .')
         self.ipDI = {}
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix
         if len(self.Pi) == 0:
@@ -977,7 +976,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the last state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # now calculate
         for c1 in self.reducedColumns:
             indx1 = colToInt[c1]
@@ -1000,12 +999,12 @@ class MSAAlgorithms(MSA):
         """
         Seesak-Monasson, using DI to map to a scalar.
         """
-        print 'calculating smDI . . .'
+        print('calculating smDI . . .')
         self.smDI = {}
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix
         if len(self.Pi) == 0:
@@ -1014,7 +1013,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the last state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # regularization?
         eij = inv(covMat)
         for c1 in self.reducedColumns:
@@ -1046,14 +1045,14 @@ class MSAAlgorithms(MSA):
         """
         Direct Information for scoring, based on Thouless-Anderson-Palmer (TAP) mean-field equations.
         """
-        print 'calculating tapDI . . .'
+        print('calculating tapDI . . .')
         self.tapDI = {}
         # ignore the heavily gapped columns
         Npositions = len(self.reducedColumns)
         Nsequences = len(self.sequences)
         # column to integer mapping
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mixing with pseudocounts
         if len(self.Pi) == 0:
@@ -1062,7 +1061,7 @@ class MSAAlgorithms(MSA):
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the last state
         L = covMat.shape[0]
-        covMat = delete(delete(covMat,xrange(20,L,21),axis=0),xrange(20,L,21),axis=1)
+        covMat = delete(delete(covMat,range(20,L,21),axis=0),range(20,L,21),axis=1)
         # REGULARIZATION BEFORE INVERSION?
         cijinv = inv(covMat)
         # now compute scores/direct information
@@ -1084,13 +1083,13 @@ class MSAAlgorithms(MSA):
         """Uses L2-regularized inversion of the full covariance matrix to calculate pair scores.  In most respects,
         this is the L2 equivalent of PSICOV.
         """
-        print "calculating RIDGE . . . "
+        print('calculating RIDGE . . .')
         self.RIDGE = {}
         # ignore heavily gapped columns
         Npositions = len(self.reducedColumns)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
@@ -1128,13 +1127,13 @@ class MSAAlgorithms(MSA):
         """
         Uses sparse covariance matrix estimation (Jones et al. 2012) to compute pair scores.
         """
-        print "calculating PSICOV . . . "
+        print('calculating PSICOV . . .')
         self.PSICOV = {}
         # ignore heavily gapped columns
         Npositions = len(self.reducedColumns)
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
-        for i in xrange(Npositions):
+        for i in range(Npositions):
             colToInt[self.reducedColumns.keys()[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
@@ -1164,12 +1163,12 @@ class MSAAlgorithms(MSA):
 
 class MSACanonicalException(KeyError):
     def __init__(self,canonical):
-        print "Your canonical sequence, '%s', cannot be found in the alignment."
+        print('Your canonical sequence, \'%s\', cannot be found in the alignment.' %canonical)
 
 
 class MSADimensionException(ValueError):
     def __init__(self,alnFile):
-        print "Your alignment file, '%s' doesn't appear to have the proper dimensions.  Every sequence should be the same length (aka an alignment).  Please check your input file."%(alnFile)
+        print('Your alignment file, \'%s\' doesn\'t appear to have the proper dimensions.  Every sequence should be the same length (aka an alignment).  Please check your input file.' %(alnFile))
 
 
 class MSAAlgorithmTests(unittest.TestCase):
