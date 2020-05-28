@@ -49,7 +49,6 @@ from numpy.random import randn, permutation
 from numpy.linalg import cholesky, svd, pinv, inv, eig
 from scipy.stats import ks_2samp, linregress
 from scipy import randn
-from itertools import izip,imap
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
 from sklearn.covariance import graph_lasso
@@ -106,7 +105,7 @@ def fractional_similarity(s1,s2):
     """
     assert len(s1) == len(s2)
     # number of dissimilar positions
-    h = 1.0*sum(imap(operator.ne,s1,s2))
+    h = 1.0*sum(map(operator.ne,s1,s2))
     return 1.0 - h/len(s1)
 
 
@@ -312,7 +311,7 @@ class MSA(object):
             for column2 in [x for x in self.columns if x > column1]:
                 self.doublets[(column1,column2)] = matrix(zeros([len(aminoAcids),len(aminoAcids)], dtype='float64'))
                 # get all pairs
-                pairs = [p for p in izip(self.columns[column1],self.columns[column2])]
+                pairs = [p for p in zip(self.columns[column1],self.columns[column2])]
                 punique = {}.fromkeys(pairs)
                 for p in punique:
                     pcount = pairs.count(p)
