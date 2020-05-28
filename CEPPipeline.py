@@ -54,6 +54,7 @@ from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
 from pycsa import CEPAlgorithms,CEPNetworks,CEPAccuracyCalculator,CEPGraphSimilarity
 from pyrankagg import rankagg
+from functools import reduce
 
 
 # decorator function to be used for logging purposes

@@ -45,6 +45,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os, re, unittest, time, pickle
 from Bio import Entrez
+from functools import reduce
 from pycsa.CEPLogging import LogPipeline
 
 # decorator function to be used for logging purposes
