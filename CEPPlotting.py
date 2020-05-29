@@ -3,7 +3,7 @@ CEPPlotting.py
 
 This module is used to make all of the plots for
 CA Brown, KS Brown, (2010) PLoS One.  They are all more or
-less built up from matplotlib and pylab.
+less built up from matplotlib and plt.
 
 This is a pure python package for correlated substitution analysis.  Specifically, it can be
 used for the kinds of analyses in the following publication:
@@ -42,7 +42,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import sys, os, unittest, pylab, math, numpy, copy, networkx, scipy
+import sys, os, unittest, math, numpy, copy, networkx, scipy
 from scipy.stats import gaussian_kde
 from matplotlib.ticker import FuncFormatter
 import networkx as nx
@@ -132,17 +132,17 @@ class CEPPlotting(object):
         mainPlot = [left, bottom, width, height]
         accuracyHist = [left, bottom_h, width, 0.2]
         reprodHist = [left_h, bottom, 0.2, height]
-        figure1 = pylab.figure(figsize=(8,8))
-        axMain = pylab.axes(mainPlot,frameon=False)
+        figure1 = plt.figure(figsize=(8,8))
+        axMain = plt.axes(mainPlot,frameon=False)
         if len(args[0].statistics['reproducibility'].values()) > 1:
             # main plot
             self.plot_acc_rep_scatter(axMain,*args)
             # accuracy histogram
-            axAccuracy = pylab.axes(accuracyHist,frameon=False)
+            axAccuracy = plt.axes(accuracyHist,frameon=False)
             axAccuracy.get_yaxis().set_visible(False)
             self.plot_acc_histogram(axAccuracy,*args)
             # reproducibility histogram
-            axReprod = pylab.axes(reprodHist,frameon=False)
+            axReprod = plt.axes(reprodHist,frameon=False)
             axReprod.get_xaxis().set_visible(False)
             self.plot_rep_histogram(axReprod,*args)
         else:
@@ -150,17 +150,17 @@ class CEPPlotting(object):
             # main plot
             self.plot_acc_rep_line(axMain,*args)
             # accuracy histogram
-            axAccuracy = pylab.axes(accuracyHist,frameon=False)
+            axAccuracy = plt.axes(accuracyHist,frameon=False)
             axAccuracy.get_yaxis().set_visible(False)
             self.plot_acc_histogram(axAccuracy,*args)
             # empty reproducibility histogram, to get y-axis and tick labels
-            axReprod = pylab.axes(reprodHist,frameon=False)
+            axReprod = plt.axes(reprodHist,frameon=False)
             axReprod.get_xaxis().set_visible(False)
             self.plot_rep_histogram(axReprod)
         if self.figDirectory is None:
-            pylab.show()
+            plt.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'accuracy_reproducibility')+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
+            plt.savefig(os.path.join(self.figDirectory,'accuracy_reproducibility')+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
 
 
     def compute_axis_limits(self, *args):
@@ -192,7 +192,7 @@ class CEPPlotting(object):
         scatterAx.set_ylim((self.repMin,self.repMax))
         scatterAx.get_xaxis().set_visible(False)
         scatterAx.get_yaxis().set_visible(False)
-        pylab.legend(tuple(labelList),loc='best')
+        plt.legend(tuple(labelList),loc='best')
 
 
     def plot_acc_rep_line(self,lineAx,*args):
@@ -212,7 +212,7 @@ class CEPPlotting(object):
         lineAx.set_ylim((self.repMin,self.repMax))
         lineAx.get_xaxis().set_visible(False)
         lineAx.get_yaxis().set_visible(False)
-        pylab.legend(lineList,labelList,loc='best')
+        plt.legend(lineList,labelList,loc='best')
 
 
     def plot_acc_histogram(self,histAx,*args):
@@ -319,7 +319,7 @@ class CEPPlotting(object):
         plt.yticks([])
         plt.box('off')
         plt.tight_layout()
-        pylab.savefig(os.path.join(self.figDirectory,'network_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
+        plt.savefig(os.path.join(self.figDirectory,'network_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,format=self.figFormat,bbox_inches='tight')
 
 
 class CEPPlottingTests(unittest.TestCase):
@@ -364,21 +364,21 @@ class CEPPlottingTests(unittest.TestCase):
                 if nList[i] in ncData:
                     nc[i] = ncData[nList[i]]
         # now make the plot
-        pylab.figure(figsize=(8,8))
+        plt.figure(figsize=(8,8))
         if layout == 'radial':
             pos = nx.circular_layout(cep.consensus_graph)
         else:
             pos = nx.nx_pydot.graphviz_layout(cep.consensus_graph,prog=layout)
         nx.draw_networkx(cep.consensus_graph,pos=pos,edgelist=edges_to_show,node_color=nc,node_size=25,with_labels=False)
-        pylab.axis('off')
+        plt.axis('off')
         if self.figDirectory is None:
-            pylab.show()
+            plt.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'network_ring_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,
+            plt.savefig(os.path.join(self.figDirectory,'network_ring_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,
                 format=self.figFormat,bbox_inches='tight')
 
 
-    def net_plot(self,cep,rcut,ncData=None,layout='fdp',cmap=pylab.cm.RdYlGn):
+    def net_plot(self,cep,rcut,ncData=None,layout='fdp',cmap=plt.cm.RdYlGn):
         """
         Draws a pipeline reproducibility graph and saves it or displays it.
         This version uses energy- or force-based layouts, includes node
@@ -419,15 +419,15 @@ class CEPPlottingTests(unittest.TestCase):
                 if nList[i] in ncData:
                     nc[i] = ncData[nList[i]]
         # now make the plot
-        pylab.figure(figsize=(8,8))
+        plt.figure(figsize=(8,8))
         pos = nx.nx_pydot.graphviz_layout(G,prog=layout)
         nx.draw_networkx(G,pos=pos,node_color=nc,cmap=cmap,node_size=200,with_labels=True,
             font_size=6,width=2.0,alpha=0.5)
-        pylab.axis('off')
+        plt.axis('off')
         if self.figDirectory is None:
-            pylab.show()
+            plt.show()
         else:
-            pylab.savefig(os.path.join(self.figDirectory,'network_spring_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,
+            plt.savefig(os.path.join(self.figDirectory,'network_spring_'+cep.method+'_'+str(rcut).replace('.','p'))+'.'+self.figFormat,
                 format=self.figFormat,bbox_inches='tight')
     '''
 
