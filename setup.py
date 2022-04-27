@@ -3,7 +3,7 @@
 from distutils.core import setup,Command
 
 setup(name='pycsa',
-      version='2.0.7',
+      version='2.0.8',
       description='Pure Python package for Correlated Substitution Analysis',
       author='Kevin Brown, Christopher Brown',
       author_email='kevin.s.brown@uconn.edu, chris.al.brown@gmail.com',
