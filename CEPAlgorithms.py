@@ -51,7 +51,7 @@ from scipy.stats import ks_2samp, linregress
 from scipy import randn
 from pycsa.CEPPreprocessing import SequenceUtilities
 from pycsa.CEPLogging import LogPipeline
-from sklearn.covariance import graph_lasso
+from sklearn.covariance import graphical_lasso
 
 # decorator function to be used for logging purposes
 log_function_call = LogPipeline.log_function_call
@@ -74,7 +74,7 @@ def prior_covariance(sigmaSample,targetType='dense'):
     """
     meanS = mean(diag(sigmaSample))
     sigmaPrior = meanS*eye(sigmaSample.shape[0])
-    if targetType is 'dense':
+    if targetType == 'dense':
         meanCVS = 2*triu(sigmaSample).sum()/(sigmaSample.shape[0]*(sigmaSample.shape[0]-1))
         sigmaPrior = sigmaPrior + meanCVS*(ones(sigmaSample.shape) - eye(sigmaSample.shape[0]))
     return sigmaPrior
@@ -160,9 +160,9 @@ class MSA(object):
             self.seqwts[k] = 1.0
         print('calculating sequence weights . . .')
         # switch on the method
-        if method is 'unweighted':
+        if method == 'unweighted':
             return
-        elif method is 'similarity' or method is 'symmpurge':
+        elif method == 'similarity' or method == 'symmpurge':
             done = []
             for k1 in self.sequences:
                 k2List = [k for k in self.sequences if k not in done and k is not k1]
@@ -171,16 +171,16 @@ class MSA(object):
                     self.seqwts[k1] += 1.0*flag
                     self.seqwts[k2] += 1.0*flag
                 done.append(k1)
-            if method is 'similarity':
+            if method == 'similarity':
                 for k in self.seqwts:
                     self.seqwts[k] = 1.0/self.seqwts[k]
-            elif method is 'symmpurge':
+            elif method == 'symmpurge':
                 for k in self.seqwts:
                     self.seqwts[k] = 1.0 - ((self.seqwts[k] - 1.0)/len(self.sequences))
                 wtsum = sum(self.seqwts.values())
                 for k in self.seqwts:
                     self.seqwts[k] = len(self.sequences)*(self.seqwts[k]/wtsum)
-        elif method is 'henikoff':
+        elif method == 'henikoff':
             for k in self.seqwts:
                 self.seqwts[k] = 0.0
             for c in self.columns:
@@ -342,7 +342,7 @@ class MSA(object):
         for column in self.columns:
             position = dict() # Uses physical numbering of positions and NOT Python numbering
             for sequence in self.sequences:
-                if self.sequences[sequence][column] is '-':
+                if self.sequences[sequence][column] == '-':
                     position[sequence] = None
                 else:
                     position[sequence] = len(self.sequences[sequence][:column+1])-self.sequences[sequence][:column+1].count('-')
@@ -393,7 +393,7 @@ class MSA(object):
                     newkey = tuple([canon[x] for x in k])
                     mapped[newkey] = v
             else:
-                if canon[k] is not None:
+                if canon[k] != None:
                     newkey = canon[k]
                     mapped[newkey] = v
         return mapped
@@ -488,7 +488,7 @@ class MSAAlgorithms(MSA):
         columnList = {}.fromkeys([c for c in self.columns if self.gaps[c] < self.gapFreqCutoff])
         print('calculating entropy . . .')
         for column in columnList:
-            letters = {}.fromkeys([x for x in self.columns[column] if x is not '-'])
+            letters = {}.fromkeys([x for x in self.columns[column] if x != '-'])
             numLetters = float(self.dimensions[0]-self.columns[column].count('-'))
             # loop through each observed residue and calculate entropy
             ent = 0.0
@@ -897,7 +897,7 @@ class MSAAlgorithms(MSA):
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
         for i in range(Npositions):
-            colToInt[self.reducedColumns.keys()[i]] = i
+            colToInt[list(self.reducedColumns.keys())[i]] = i
             # covariance matrix calculation
         covMat = self.calculate_covariance_matrix(self.Pij,self.Pi,colToInt)
         # drop the 21st state
@@ -938,7 +938,7 @@ class MSAAlgorithms(MSA):
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
         for i in range(Npositions):
-            colToInt[self.reducedColumns.keys()[i]] = i
+            colToInt[list(self.reducedColumns.keys())[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
             self.mix_distributions()
@@ -968,7 +968,7 @@ class MSAAlgorithms(MSA):
         Nsequences = len(self.sequences)
         colToInt = {}
         for i in range(Npositions):
-            colToInt[self.reducedColumns.keys()[i]] = i
+            colToInt[list(self.reducedColumns.keys())[i]] = i
         # mix
         if len(self.Pi) == 0:
             self.mix_distributions()
@@ -1005,7 +1005,7 @@ class MSAAlgorithms(MSA):
         Nsequences = len(self.sequences)
         colToInt = {}
         for i in range(Npositions):
-            colToInt[self.reducedColumns.keys()[i]] = i
+            colToInt[list(self.reducedColumns.keys())[i]] = i
         # mix
         if len(self.Pi) == 0:
             self.mix_distributions()
@@ -1053,7 +1053,7 @@ class MSAAlgorithms(MSA):
         # column to integer mapping
         colToInt = {}
         for i in range(Npositions):
-            colToInt[self.reducedColumns.keys()[i]] = i
+            colToInt[list(self.reducedColumns.keys())[i]] = i
         # mixing with pseudocounts
         if len(self.Pi) == 0:
             self.mix_distributions()
@@ -1090,7 +1090,7 @@ class MSAAlgorithms(MSA):
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
         for i in range(Npositions):
-            colToInt[self.reducedColumns.keys()[i]] = i
+            colToInt[list(self.reducedColumns.keys())[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
             self.mix_distributions()
@@ -1134,7 +1134,7 @@ class MSAAlgorithms(MSA):
         # map column positions to consecutive integers, starting at 0
         colToInt = {}
         for i in range(Npositions):
-            colToInt[self.reducedColumns.keys()[i]] = i
+            colToInt[list(self.reducedColumns.keys())[i]] = i
         # mix pseudocounts with real counts to obtain effective pair, singlet freqs.
         if len(self.Pi) == 0:
             self.mix_distributions()
@@ -1145,7 +1145,7 @@ class MSAAlgorithms(MSA):
         # covMat = empirical_shrinkage(sigmaPrior,covMat)
         covMat = 0.5*covMat + 0.5*sigmaPrior
         # solve sparse problem:  things depend rather critically on the sparseness parameter
-        covariance,precision = graph_lasso(asarray(covMat),alpha=0.1)
+        covariance,precision = graphical_lasso(asarray(covMat),alpha=0.1)
         # overwrite old covariance matrix with the new precision matrix
         covMat = asmatrix(precision)
         # compute the PSICOV scores
