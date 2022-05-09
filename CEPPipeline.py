@@ -635,18 +635,18 @@ class CEPPipeline(object):
                 else:
                     self.statistics['accuracy'][method].append(self.acc_calc.calculate(scores,self.options.acc_method))
             # now do the voting
-            agg_ranks = flra.aggregate_ranks(score_list,areScores=True,method='borda')
+            _,agg_ranks = flra.aggregate_ranks(score_list,areScores=True,method='borda')
             # in order to make the performance vector for the voted ranks, we need the highest
             #   rank item to be the LARGEST score, so create a fake set of scores = 1/rank; we
             #   also use these scores for edge weights in the voted network
-            voted_scores = {k:1.0/v for k,v in agg_ranks.iteritems()}
+            voted_scores = {k:1.0/v for k,v in agg_ranks.items()}
             if no_acc:
                 self.statistics['accuracy']['voted'].append(None)
             else:
                 self.statistics['accuracy']['voted'].append(self.acc_calc.calculate(voted_scores,self.options.acc_method))
             # form the consensus graph for this set of alignments
             con_graph = CEPNetworks.CEPGraph()
-            for (i,j),s in voted_scores.iteritems():
+            for (i,j),s in voted_scores.items():
                 con_graph.add_edge(i,j,weight=s)
             self.consensus_graph.append(con_graph)
         # now dump the results
@@ -709,7 +709,7 @@ class CEPPipeline(object):
         # lkoranks = FLRA.locally_kemenize(aggranks,[FLRA.convert_to_ranks(s) for s in Slist])
         # in order to make the performance vector, we need the highest rank item to be
         #   the LARGEST score.  (So we send in 1/rank)
-        PV = make_perfstring({k:1.0/v for k,v in aggranks.iteritems()},C)
+        PV = make_perfstring({k:1.0/v for k,v in aggranks.items()},C)
         acc_hamming['voted'].append(1 - 1.0*hamming_dist_binary(PV,I)/(2*K))
         acc_topN['voted'].append(1 - 1.0*hamming_dist_binary(PV[:N],I[:N])/N)
         # reset I
